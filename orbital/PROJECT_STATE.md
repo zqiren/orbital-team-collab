@@ -2,7 +2,7 @@
 # PROJECT_STATE
 
 ## 当前阶段
-SPEC-03 Member Skill & Agent Adapters 已完成并保持未提交：agent-neutral Member Skill、确定性 `/team` parser/CLI fallback、Claude project command、bounded SessionStart context/run registration 与可回滚 copy/link installer 已交付；SPEC-03 专项 11/11、全量 `python3 -m pytest -q` 81/81 通过。下一阶段执行 SPEC-06，完成后 SPEC-07 转 Ready；SPEC-08 等待这两项。
+SPEC-03 Member Skill & Agent Adapters 已完成并 checkpoint（cbe716a）：agent-neutral Member Skill、确定性 `/team` parser/CLI fallback、Claude project command、bounded SessionStart context/run registration 与可回滚 copy/link installer 已交付；SPEC-03 专项 11/11、全量 `python3 -m pytest -q` 81/81 通过。SPEC-06 已派发 codex（用户重置其用量）；完成后 SPEC-07 转 Ready；SPEC-08 等待 SPEC-06/07。
 
 ## 已完成（2026-09-01）
 - orbital/instructions/project_goals.md — 项目目标
