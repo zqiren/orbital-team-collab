@@ -22,7 +22,7 @@
 2. SPEC-08 使用已完成的 Member/Manager/IM/Dashboard primitives 组装可重置 demo fixture 与多 worktree orchestration，不复制状态机或引入真实 IM/provider 账号
 3. 每个 spec 完成后由主 session 复测并本地 checkpoint commit，发送给 Kimi/其他外部对象仍需单独授权
 4. checkpoint 历史：SPEC-00 `902a870`、SPEC-01 `06691b4`、SPEC-02 `83cbf6e`、SPEC-04 实现层 `6e30a89`/记忆层 `fae75d7`、SPEC-05 实现层 `ed5c52e`/记忆层 `4e50161`、SPEC-03 `cbe716a`、SPEC-06 `97be555`；SPEC-07 按本 session 硬约束保持未提交，待主 session 复测 checkpoint；git 只读命令仍须加 `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null`（见 LESSONS）
-5. Push 由用户在本机终端执行 `cd /Users/keanezhou/Desktop/Agent-collaboration && git push -u origin main`（2026-09-01 用户决定暂缓：拒绝提供 PAT，沙箱无 gh/ssh/keychain 凭据）；后续 spec 完成同样先本地 commit，push 一并交给用户
+5. Push 由用户在本机终端进入 `<workspace>` 后执行 `git push -u origin main`（2026-09-01 用户决定暂缓：拒绝提供 PAT，沙箱无 gh/ssh/keychain 凭据）；后续 spec 完成同样先本地 commit，push 一并交给用户
   <!--mem id:380ae9 created:2026-09-01 touched:2026-09-01-->
 ## 阻塞
 - SPEC-07 无实现 blocker；当前 sandbox 禁止 loopback listen socket，因此 routes 使用同一 BaseHTTPRequestHandler 的内存 HTTP transport 验证，真实 `teamctl dashboard` socket/browser smoke 留普通本机复测。

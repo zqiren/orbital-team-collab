@@ -42,7 +42,7 @@ Chosen: 实现拆为 SPEC-00～SPEC-09，每个 spec 在单独 session 完成；
 Reason: 每阶段保持单一可验收结果，并让新 session 无需聊天历史即可冷启动。
 
 ## D10 — Git checkpoint 与 push 策略 <!--mem id:d10-git-checkpoint-push created:2026-09-01 touched:2026-09-01-->
-Chosen: 2026-09-01 应用户要求在工作区根目录完成 `git init`（main 分支）+ remote `origin` = https://github.com/zqiren/orbital-team-collab.git；本地 git identity 用 zqiren / zqzqzqr0@gmail.com（个人 GitHub，不用全局 tencent.com 邮箱）。`.gitignore` 排除 `orbital-src/`（55MB 只读快照）与 orbital 机器管理运行时（sessions/ledger/tool-results/output/queue/approval_history/sub_agents 的 jsonl 与 .latest）；`orbital/*.md`、instructions/、skills/、sub_agents MEMORY.md 版本化。用户已给出 standing authorization：每个 spec 完成并验证后做一次 checkpoint commit，并立即 push 到 `origin/main`；发送给 Kimi 或其他外部对象仍需单独授权。
+Chosen: 2026-09-01 应用户要求在工作区根目录完成 `git init`（main 分支）+ remote `origin` = https://github.com/zqiren/orbital-team-collab.git；本地 git identity 使用用户指定的 repo-local identity（交付文档不保留个人 email）。`.gitignore` 排除 `orbital-src/`（55MB 只读快照）与 orbital 机器管理运行时（sessions/ledger/tool-results/output/queue/approval_history；`orbital/sub_agents/*/` 下白名单只保留 MEMORY.md，其余一律忽略——不同编排器 harness 会写入未知类型的 runtime 文件）；`orbital/*.md`、instructions/、skills/、sub_agents MEMORY.md 版本化。用户已给出 standing authorization：每个 spec 完成并验证后做一次 checkpoint commit，并立即 push 到 `origin/main`；发送给 Kimi 或其他外部对象仍需单独授权。
 Reason: 用户 2026-09-01 明确要求 setup git，并在 SPEC-00 完成后明确要求“commit 然后 push，每一次完成之后都 commit 和 push 一次”。
 Rejected: 等 SPEC-01 再 init；每次 spec push 都重复询问；提交 orbital 运行时数据；未经授权向 Kimi/其他人发送交付物。
 

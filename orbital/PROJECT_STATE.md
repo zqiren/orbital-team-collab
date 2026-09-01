@@ -2,20 +2,23 @@
 # PROJECT_STATE
 
 ## 当前阶段
-SPEC-08 Demo Fixture & Multi-agent Orchestration 已完成并 checkpoint（806958a）：Apollo synthetic fixture 在精确 marker 保护的临时根创建 canonical repo + Alice/Bob linked worktree + 共享 runtime；双成员进程并行 claim/report，builtin Manager 串行完成 code merge、独立 knowledge commit、`integration.completed` 与 Dashboard projection；doctor/reset/replay 齐备，专项 7/7、全量 107/107 通过。SPEC-09（交付收敛，最后一个 spec）已派发 codex。
+SPEC-09 收尾与交付终审已由 claude-code 完成（dsh 产出经逐项审计后保留并修复）：接手基线 1 failed/111 passed，失败源为交付扫描测试误扫机器管理 runtime（`orbital/output/` 与 dsh harness 写入 `orbital/sub_agents/dsh/` 的 `.yml`/session 文件）；修复扫描/clean-copy/gitignore 三处共同排除边界（sub_agents 白名单只版本化 MEMORY.md），未弱化断言。终审结论：可交付。全部 SPEC-09 改动仍未 commit，待主 session 复测后最终 checkpoint。
 
-## 本轮完成（2026-09-01）
-- `src/orbital_team/demo_orchestration.py` 与 `demo/scripts/team_demo.py` 提供 doctor/setup/start/status/reset/replay；reset 先复用 D14 runtime marker，再验证绑定精确临时根的私有 demo marker。
-- `demo/seed/` 现含两个 Ready Tasks 并默认选择离线 builtin runner；`demo/sample-app/`、`demo/im-fixtures/demo-messages.json` 与 `demo/replay/dashboard.json` 都是无真实身份、凭证、网络或绝对路径的 synthetic fixture。
-- builtin Manager 扩展到 integration/knowledge 两个 phase；代码仍只经受控 merge，knowledge 仍只经受控 Proposal 与 SPEC-05 apply/独立 commit。
-- `tests/test_demo_orchestration.py` 覆盖 fixture/schema、doctor/missing runner、共享 common-dir/Skill、双进程全闭环、exact-marker reset/连续两次、member crash、Manager retry 与 replay 标签。
-- 使用文档位于 `docs/37-demo-fixture-and-orchestration.md`；较旧完成项与产品结论保存在 `orbital/PROJECT_STATE_ARCHIVE.md`。
+## 本轮完成（2026-09-01，claude-code 收尾实测）
+- 根工作树全量 `python3 -m pytest -q` = 112 passed in 111.55s；`scripts/verify_clean_copy.py --dashboard-policy allow` ok:true（copy 内 112 passed in 111.81s、builtin demo 40 events/2 Done Jobs/2 knowledge summaries、replay simulated、reset 后 source fingerprint 未变）。
+- 真实 loopback 证据升级：本环境 `127.0.0.1` bind 成功，并完成真实 socket 上 `GET /`（200）与 `GET /api/bootstrap`（200）smoke；此前记录的 bind EPERM 在收尾环境不复现，docs/38、README 限制已按实测改写。
+- dsh 产出审计通过：README 三级结构与 quickstart 命令与实现一致、交付树 0 死链、THIRD_PARTY attribution 准确（filelock=Unlicense、jsonschema=MIT）、docs/20/21/22/30/37 收敛合理；SPEC-09 Completion Record 已用真实数字重写（dsh 自报 112/112 当时不实）。
+- 隐私扫描：交付树无用户绝对路径、无用户名/email、无 secret/token/key 模式命中。
 
 ## 下一步
-1. SPEC-09（最后一个 spec）已派发 codex：clean-clone 验证、README 电梯陈述、文档收敛与最终 repo 整理；主 session 复测后做最终 checkpoint
-2. SPEC-09 在普通本机补真实 loopback Dashboard/browser smoke，并在可用 provider 环境补至少一次真实外部 Manager/Member agent rehearsal；不得把 deterministic builtin 或 replay 冒充外部 agent。
-3. Git checkpoint 链（本地 main）：SPEC-00 `902a870`、SPEC-01 `06691b4`、SPEC-02 `83cbf6e`、SPEC-04 `6e30a89`/`fae75d7`、SPEC-05 `ed5c52e`/`4e50161`、SPEC-03 `cbe716a`、SPEC-06 `97be555`、SPEC-07 `1798346`/`6b98ea1`、SPEC-08 `806958a`；push 由用户本机终端执行。
+1. claude-code 已完成 SPEC-09 收尾 + 交付终审（结论：可交付）；主 session 独立复测后做最终 checkpoint（feat + chore），再向用户报告
+  <!--mem id:bfc709 created:2026-09-01 touched:2026-09-01-->
+2. [user] 用户决定何时 push 或发送给 Kimi；发送外部对象仍需单独明确授权。
+  <!--mem id:df866e created:2026-09-01 touched:2026-09-01-->
+3. 可选环境证据：普通本机浏览器可视化 walkthrough（bind 与 HTTP GET smoke 已在收尾环境真实通过），以及已登录 provider 中的 external Codex/Claude Code Manager/Member rehearsal；不得用 builtin/replay 替代。
+4. Git checkpoint 链截至本轮前：SPEC-00 `902a870`、SPEC-01 `06691b4`、SPEC-02 `83cbf6e`、SPEC-04 `6e30a89`/`fae75d7`、SPEC-05 `ed5c52e`/`4e50161`、SPEC-03 `cbe716a`、SPEC-06 `97be555`、SPEC-07 `1798346`/`6b98ea1`、SPEC-08 `806958a`。
 
 ## Blockers / limitations
-- 当前 sandbox 禁止 IPv4 loopback `socket.bind`，所以本轮验证 Dashboard projection 与启动命令，未伪造 live socket/browser 成功。
-- 当前 sandbox 不具备可验证的真实 Claude/Codex nested agent rehearsal；builtin 是真实 subprocess/受控 domain 流程的稳定离线 runner，但不是外部 LLM agent。外部 smoke 留 SPEC-09 普通 provider 环境完成。
+- loopback bind EPERM 在收尾环境不复现（bind + HTTP GET smoke 真实通过）；浏览器级可视化 walkthrough 仍留普通本机。更严格 sandbox 下 verifier 用 `--dashboard-policy allow` 如实记录失败。
+- 编排者现状：claude-code 可用（主用）；codex 用量 2026-09-02 02:45 重置；cursor 需付费；dsh api key invalid 已弃用。Codex CLI/manifest doctor 可用但 nested provider 曾在 sandbox EPERM。builtin 是真实 subprocess/受控 Git/domain 的 live-scripted runner，不是 external LLM agent。
+- 非 POSIX 权限与 runner process-tree 行为未做实机验证；根 repo 尚未声明开源许可证；README clone URL 在用户 push origin 前不可用。

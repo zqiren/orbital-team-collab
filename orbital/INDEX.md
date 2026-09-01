@@ -2,13 +2,15 @@
 # INDEX
 
 ## 交付文档（docs/）
+- README.md — Kimi 评审入口：30 秒立论、架构图、quickstart、文档导航与限制
+- THIRD_PARTY_NOTICES.md — filelock/jsonschema 直接依赖的 attribution 与根 repo 许可边界
 - docs/00-assignment-brief.md — 作业简报：背景、成功标准、repo 规划
 - docs/01-orbital-current-state.md + docs/01b-orbital-source-notes.md — Orbital 现状盘点与源码级单人假设证据
 - docs/research/ + docs/02-competitive-landscape.md — 竞品原始联网研究（claude-code/codex/adjacent）与综合分析
 - docs/10-user-scenarios.md + docs/11-team-feature-directions.md — 团队画像与核心场景、方向池 F1-F7 与旗舰组合
 - docs/20-prd.md + docs/21-architecture.md + docs/22-protocol.md — PRD、架构与协议契约（两层文件模型、命令语法）
 - docs/30-roadmap.md — SPEC-01～09 里程碑与后续路线
-- docs/31～37-*.md — 各 spec 的安装/运行/安全/验证说明（kernel、member、manager-integration、knowledge、IM、dashboard、demo）
+- docs/31～38-*.md — 各 spec 的安装/运行/安全/验证说明与最终 clean-copy/录制指南
 
 ## 系统与目标
 - orbital-src/ — Orbital 官方源码快照（只读参考，不进交付 repo）
@@ -25,9 +27,10 @@
 - im_context.py — IM provider seam、fixture extraction、Potential Task/Open Question 生命周期
 - dashboard.py + dashboard_static/ — loopback Dashboard：runtime 投影、actor 绑定路由与静态 UI
 - demo_orchestration.py + demo/scripts/team_demo.py — 可重置 demo 编排与 doctor/setup/start/status/reset/replay 入口
+- scripts/verify_clean_copy.py — disposable Git copy/venv 中验证 install、tests、CLI、demo、bind、reset 与 source isolation
 - demo/seed/ + demo/runners/ + demo/sample-app/ + demo/im-fixtures/ + demo/replay/ — synthetic seed、runner manifests、示例应用、离线 IM fixtures 与 replay fallback
 - skills/orbital-team-manager/ + skills/orbital-team-member/ — Manager/Member agent Skills、Claude command/hook 与安装器；src/orbital_team/skills/manager-integration.md — Manager 集成 procedure
-- tests/ — 每 spec 一个 test_*.py：runtime_kernel / member_workflow / member_adapters / manager_integration / knowledge_workflow / im_context / dashboard / demo_orchestration
+- tests/ — 分 spec 与最终 delivery contract tests，覆盖 runtime、workflow、Manager、knowledge、IM、Dashboard、demo 与交付扫描
 
 ## 规范 Schema（schemas/）
 - schemas/v1/orbital-team.schema.json + schemas/README.md — Protocol 1.0 JSON Schema bundle 与消费映射

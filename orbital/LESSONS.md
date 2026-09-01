@@ -8,7 +8,7 @@
 
 ### 2026-09-01 — git-sandbox-commit-push
 **What happened:** 子 agent 报告「.git 只读、DNS 不通、无法 commit/push」；主 session 实测网络正常（curl github.com 返回 200），commit 失败仅因 git 读 `~/.gitconfig` 被沙箱拒绝。push 另因 HTTPS 无凭据失败：沙箱无 gh CLI、`~/.ssh` 不可读、osxkeychain 静默无凭据，用户拒绝提供 PAT（request_credential 被 DENIED，勿重试）。
-**Do instead:** 本仓所有 git status/add/commit/log 加 `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null`（identity 走 repo 本地 config 的 zqiren / zqzqzqr0@gmail.com，不受影响；`~/.config/git/ignore` 警告无害）。push 沙箱内不可行，交用户本机终端执行 `git push -u origin main`。子 agent 的环境失败结论先在主 session 复测再采信。
+**Do instead:** 本仓所有 git status/add/commit/log 加 `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null`（identity 走用户指定的 repo-local config，不受影响；`~/.config/git/ignore` 警告无害）。push 沙箱内不可行，交用户本机终端执行 `git push -u origin main`。子 agent 的环境失败结论先在主 session 复测再采信。
 **Keywords:** git, sandbox, GIT_CONFIG_GLOBAL, commit, push, credential, PAT
 
 ### 2026-09-01 — zsh-special-variable
@@ -32,7 +32,7 @@
 **Keywords:** python, ProcessPoolExecutor, semaphore, sandbox, subprocess, concurrency, barrier
 
 ### 2026-09-01 — pytest-rootpath-parent-eperm
-**What happened:** 沙箱内任何 pytest 运行（含显式 `pytest tests/`）收集阶段即报 `PermissionError: ... '/Users/keanezhou/Desktop'`。真实根因：pytest 8.3 收集 rootpath（=仓库根）的 Dir 节点时，`Session._collect_path` → `gethookproxy(rootpath.parent)` → `PytestPluginManager._getconftestmodules(Desktop)` → `_get_directory` 对 Desktop 调 `is_file()` stat，被沙箱拒绝；与 rootdir 探测无关，仅在仓库根放 pytest.ini 无效。
+**What happened:** 沙箱内任何 pytest 运行（含显式 `pytest tests/`）收集阶段即对 workspace parent 报 `PermissionError: Operation not permitted`。真实根因：pytest 8.3 收集 rootpath（=仓库根）的 Dir 节点时，`Session._collect_path` → `gethookproxy(rootpath.parent)` → `PytestPluginManager._getconftestmodules(workspace-parent)` → `_get_directory` 对受限父目录调 `is_file()` stat，被沙箱拒绝；与 rootdir 探测无关，仅在仓库根放 pytest.ini 无效。
 **Do instead:** 仓库根 `conftest.py` monkeypatch `PytestPluginManager._getconftestmodules`：捕获 `PermissionError` 返回空 conftest 列表（正常机器不会触发该分支）；根目录 `pytest.ini` 设 `testpaths = tests` 钉住收集范围、`pythonpath = src` 让 src 布局免安装可导入。统一用 `python3 -m pytest -q` 跑全量。
 **Keywords:** pytest, rootpath, gethookproxy, conftest, sandbox, EPERM, collection
 
@@ -55,3 +55,8 @@
 **What happened:** SPEC-07 的临时 Dashboard server 即使绑定 `127.0.0.1:0`，当前 macOS sandbox 仍在 `socket.bind` 返回 `PermissionError: Operation not permitted`；这发生在任何 browser/HTTP request 之前，不是 loopback guard、route 或 domain failure。
 **Do instead:** HTTP adapter 设计为 handler factory，测试用内存 socket transport 驱动同一个 `BaseHTTPRequestHandler` 完成 raw GET/POST/headers/body/status smoke；server factory 单测 loopback address guard。真实 listen/browser smoke 在普通本机运行 `teamctl dashboard --host 127.0.0.1`，不得把沙箱内存 transport 冒充 live socket 成功。
 **Keywords:** dashboard, loopback, socket, sandbox, EPERM, http, testing
+
+### 2026-09-01 — delivery-scan-runtime-allowlist
+**What happened:** SPEC-09 交付扫描测试失败并非交付文件泄漏：`tests/test_delivery_contract.py` 的排除清单手抄自 `.gitignore` 但漏了 `orbital/output/`，扫到了机器管理 runtime 里的 pytest 日志；随后又发现新编排器 harness（dsh）在 `orbital/sub_agents/dsh/` 写入 `.yml`/`dsh-sessions/` 等未知类型 runtime 文件，`*.jsonl`/`.latest` 黑名单模式拦不住，`git add .` 会把含绝对路径的 runtime 带进 commit。
+**Do instead:** 交付边界三处（`.gitignore`、delivery 扫描测试排除、clean-copy `_ignored`）必须表达同一份机器 runtime 清单，改其一必须同步其余两处；`orbital/sub_agents/*/` 用白名单——只版本化 MEMORY.md、其余一律忽略——而不是枚举已知扩展名。修此类失败先看命中文件是否属于交付集，属于 runtime 就修排除范围而不是改 runtime 文件；断言本身（交付文件无用户路径/secret）不得弱化。
+**Keywords:** delivery, gitignore, allowlist, sub_agents, scan, exclusion, runtime
