@@ -2,7 +2,7 @@
 # PROJECT_STATE
 
 ## 当前阶段
-SPEC-03 Member Skill & Agent Adapters 已完成并 checkpoint（cbe716a）：agent-neutral Member Skill、确定性 `/team` parser/CLI fallback、Claude project command、bounded SessionStart context/run registration 与可回滚 copy/link installer 已交付；SPEC-03 专项 11/11、全量 `python3 -m pytest -q` 81/81 通过。SPEC-06 已派发 codex（用户重置其用量）；完成后 SPEC-07 转 Ready；SPEC-08 等待 SPEC-06/07。
+SPEC-06 IM Context & Potential Task Stub 已完成并 checkpoint（97be555）：agent-neutral provider seam/registry、离线 synthetic fixture、bounded deterministic extraction、Potential Task triage/Promote 与 Open Question lifecycle 已交付；SPEC-06 专项 10/10、全量 `python3 -m pytest -q` 91/91 通过。SPEC-07 已派发 codex；完成后 SPEC-08 转 Ready。主 session 侧 spec 派发/复测/checkpoint 循环已沉淀为 skills/spec-pipeline/SKILL.md。
 
 ## 已完成（2026-09-01）
 - orbital/instructions/project_goals.md — 项目目标
@@ -24,6 +24,7 @@ SPEC-03 Member Skill & Agent Adapters 已完成并 checkpoint（cbe716a）：age
 - src/orbital_team/manager_integration.py、manager_runner.py、manager_proc.py、teamd.py、tests/test_manager_integration.py、docs/33-event-driven-manager-integration.md — report event 自动调度、Integration Job/Manager Run、受控 Git merge、失败/崩溃恢复、私有日志与 12 项专项测试
 - src/orbital_team/knowledge_workflow.py、skills/orbital-team-manager/、tests/test_knowledge_workflow.py、docs/34-manager-knowledge-compilation.md — durable knowledge 分类、Proposal 校验、受控独立 commit/no-change、dirty/stale/block/resume、幂等恢复与 8 项专项测试
 - src/orbital_team/member_adapter.py、skills/orbital-team-member/、tests/test_member_adapters.py — worktree-bound `/team` adapter、Claude SessionStart/member Run、agent-neutral install/fallback 与 11 项专项测试
+- src/orbital_team/im_context.py、demo/im-fixtures/、tests/test_im_context.py、docs/35-im-context-and-potential-task-stub.md — 离线 IM provider/ContextItem fixture、evidence extraction、Potential Task/Open Question triage 与 10 项专项测试
 - orbital-src/ — Orbital 官方 main 源码快照（git clone 被沙箱挡，改 tarball，见 LESSONS）
 
 ## 核心结论（已锚定）
@@ -38,13 +39,13 @@ SPEC-03 Member Skill & Agent Adapters 已完成并 checkpoint（cbe716a）：age
 - 工作系统包含 Confirmed Tasks、Potential Tasks、Open Questions；IM v1 只留 provider stub/fixture，Potential Task 经 triage 后才能成为可领取任务
 
 ## 下一步
-1. 剩余 spec 逐 spec 执行：下一项 SPEC-06（Ready），之后 SPEC-07、SPEC-08、SPEC-09；每个 spec 由主 session 复测后 checkpoint。SPEC-07 在 SPEC-06 Done 后改 Ready
-2. SPEC-06 必须复用共享 runtime/storage 并保持 IM provider 为 fixture/stub，不接真实账号；Potential Task 与 Open Question 不得混入 Confirmed Task 状态机
+1. 剩余 spec 逐 spec 执行：下一项 SPEC-07（Ready），之后 SPEC-08、SPEC-09；每个 spec 由主 session 复测后 checkpoint
+2. SPEC-07 必须复用共享 runtime/domain 作为唯一写入口，只实现 loopback Dashboard adapter 与文件状态投影，不在前端复制三类工作对象状态机
 3. 每个 spec 完成后由主 session 复测并本地 checkpoint commit，发送给 Kimi/其他外部对象仍需单独授权
-4. checkpoint 历史：SPEC-00 `902a870`、SPEC-01 `06691b4`、SPEC-02 `83cbf6e`、SPEC-04 实现层 `6e30a89`/记忆层 `fae75d7`、SPEC-05 实现层 `ed5c52e`/记忆层 `4e50161`；SPEC-03 按本 session 硬约束保持未提交；git 只读命令仍须加 `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null`（见 LESSONS）
+4. checkpoint 历史：SPEC-00 `902a870`、SPEC-01 `06691b4`、SPEC-02 `83cbf6e`、SPEC-04 实现层 `6e30a89`/记忆层 `fae75d7`、SPEC-05 实现层 `ed5c52e`/记忆层 `4e50161`、SPEC-03 `cbe716a`；SPEC-06 按本 session 硬约束保持未提交，待主 session 复测 checkpoint；git 只读命令仍须加 `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null`（见 LESSONS）
 5. Push 由用户在本机终端执行 `cd /Users/keanezhou/Desktop/Agent-collaboration && git push -u origin main`（2026-09-01 用户决定暂缓：拒绝提供 PAT，沙箱无 gh/ssh/keychain 凭据）；后续 spec 完成同样先本地 commit，push 一并交给用户
   <!--mem id:380ae9 created:2026-09-01 touched:2026-09-01-->
 
 ## 阻塞
-- SPEC-03 无实现 blocker；Claude CLI 当前不可用，Codex 嵌套 app-server 仍被 EPERM 阻塞，因此真实 provider UI smoke 由 simulated Claude Hook input、injected dispatcher 与真实 subprocess CLI fallback 替代并明确记录限制。
+- SPEC-06 无实现 blocker；按冻结范围只提供 synthetic fixture/provider seam，未连接或 smoke 真实 IM 账号、OAuth、webhook 或网络 connector。
 - 已完成的 checkpoint（`902a870`、`06691b4`、`83cbf6e`）均未 push 到 origin/main；沙箱内无 HTTPS 凭据，由用户在自己终端决定 push 节奏。
