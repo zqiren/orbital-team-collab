@@ -2,10 +2,10 @@
 
 Invoked as ``python3 -m orbital_team.manager_proc <request.json>`` by the
 ``CommandManagerRunner`` adapter. It follows the exact contract every agent
-runner must follow: read one schema-valid request file, review only the bound
-diff, run the allowed validation policy, merge exclusively through the
-controlled ``teamctl manager merge`` command, and write one schema-valid
-result file. It never mutates Git or runtime JSON directly.
+runner must follow: read one schema-valid request file, use only declared
+policies, merge through the controlled Manager command, propose knowledge
+through the controlled knowledge command, and write one schema-valid result
+file. It never mutates Git or runtime JSON directly.
 """
 
 from __future__ import annotations
@@ -55,6 +55,7 @@ def _result(
     outcome: str,
     *,
     merge_commit: str | None = None,
+    proposal_id: str | None = None,
     validation: list[dict[str, str]] | None = None,
     changes: list[str] | None = None,
     risk: str | None = None,
@@ -66,7 +67,7 @@ def _result(
         "merge_commit": merge_commit,
         "open_question_ids": [],
         "outcome": outcome,
-        "proposal_id": None,
+        "proposal_id": proposal_id,
         "risk_summary": risk,
         "run_id": request["run_id"],
         "schema_version": request["schema_version"],
@@ -150,6 +151,79 @@ def integrate(request: dict[str, Any]) -> dict[str, Any]:
     )
 
 
+def compile_knowledge(request: dict[str, Any]) -> dict[str, Any]:
+    """Create a deterministic proposal through the SPEC-05 domain command."""
+    context = read_json(Path(request["input_paths"]["context"]))
+    pack = context["pack"]
+    relative = "orbital/PROJECT_STATE.md"
+    memory_path = Path(request["input_paths"]["memory_project_state"])
+    current = memory_path.read_text(encoding="utf-8")
+    entry = (
+        f"- Demo integration `{request['task_id']}` completed from "
+        f"`{context['source_commit']}`."
+    )
+    patches: list[dict[str, Any]] = []
+    if entry not in current.splitlines():
+        content = current.rstrip() + "\n\n" + entry + "\n"
+        patches.append(
+            {
+                "base_sha256": pack["current_memory_hashes"][relative],
+                "content": content,
+                "operation": "updated",
+                "path": relative,
+            }
+        )
+    policy = _policy(request, "knowledge-propose")
+    if policy is None:
+        return _result(
+            request,
+            "blocked",
+            risk="No controlled knowledge proposal policy was provided.",
+        )
+    argv = [
+        *policy["argv_prefix"],
+        request["job_id"],
+        "--summary",
+        (
+            f"Record deterministic demo completion for {request['task_id']}."
+            if patches
+            else f"No additional durable knowledge for {request['task_id']}."
+        ),
+        "--request-id",
+        f"builtin-knowledge-{request['job_id']}",
+    ]
+    for patch in patches:
+        argv.extend(["--patch", json.dumps(patch, sort_keys=True)])
+    completed = _run_policy(
+        argv,
+        request["workspace"],
+        max(1, request["timeout_seconds"] - 5),
+    )
+    if completed.returncode == 0:
+        proposal = json.loads(completed.stdout.strip().splitlines()[-1])["proposal"]
+        return _result(
+            request,
+            "proposed" if patches else "no_change",
+            proposal_id=proposal["id"],
+        )
+    try:
+        error = json.loads(completed.stderr.strip().splitlines()[-1])["error"]
+    except (json.JSONDecodeError, KeyError, IndexError):
+        error = {
+            "code": "E_INTERNAL",
+            "message": completed.stderr.strip()[-500:],
+            "retryable": True,
+        }
+    return _result(
+        request,
+        "retryable" if error.get("retryable") else "blocked",
+        risk=(
+            f"Controlled knowledge proposal returned {error.get('code')}: "
+            f"{error.get('message')}"
+        ),
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     arguments = list(sys.argv[1:] if argv is None else argv)
     if len(arguments) != 1:
@@ -158,10 +232,11 @@ def main(argv: list[str] | None = None) -> int:
     request_path = Path(arguments[0])
     request = read_json(request_path)
     validate("managerRunRequest", request)
-    if request["phase"] != "integration":
-        print("manager_proc only implements the integration phase", file=sys.stderr)
-        return 2
-    result = integrate(request)
+    result = (
+        integrate(request)
+        if request["phase"] == "integration"
+        else compile_knowledge(request)
+    )
     validate("managerRunResult", result)
     atomic_write_json(Path(request["result_path"]), result)
     return 0

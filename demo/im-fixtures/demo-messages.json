@@ -1,0 +1,32 @@
+{
+  "conversations": [
+    {
+      "display_name": "Synthetic Apollo planning",
+      "id": "demo-planning",
+      "messages": [
+        {
+          "access_scope": "fixture",
+          "conversation_id": "demo-planning",
+          "message_id": "demo-message-001",
+          "permalink": null,
+          "provider": "fixture",
+          "sender": "synthetic-product-lead",
+          "text": "TASK: Add retry metrics\nSUMMARY: Track retry attempts with a stable aggregation dimension.\nQUESTION: Should retries be grouped by provider or by task?\nBLOCKING: true\nOWNER: human:demo-manager",
+          "timestamp": "2026-09-01T08:15:00Z"
+        },
+        {
+          "access_scope": "fixture",
+          "conversation_id": "demo-planning",
+          "message_id": "demo-message-002",
+          "permalink": null,
+          "provider": "fixture",
+          "sender": "synthetic-engineer",
+          "text": "Synthetic context only; this message intentionally produces no work object.",
+          "timestamp": "2026-09-01T08:16:00Z"
+        }
+      ]
+    }
+  ],
+  "kind": "orbital-team-im-fixture",
+  "version": 1
+}

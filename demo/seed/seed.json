@@ -3,8 +3,7 @@
   "demo": true,
   "kind": "orbital-team-seed",
   "project_slug": "apollo",
-  "runner": "manual",
+  "runner": "builtin",
   "schema_version": "1.0",
   "seed_id": "demo-apollo-v1"
 }
-

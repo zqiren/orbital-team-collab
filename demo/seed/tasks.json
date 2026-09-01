@@ -1,7 +1,41 @@
 {
-  "items": {},
+  "items": {
+    "apollo-T-0001": {
+      "acceptance_criteria": ["Greeting returns a friendly personalized response."],
+      "assignee": null,
+      "blocking_question_ids": [],
+      "created_at": "2026-09-01T08:00:00Z",
+      "created_by": "human:demo-manager",
+      "dependencies": [],
+      "description": "Implement the deterministic greeting response.",
+      "id": "apollo-T-0001",
+      "labels": ["demo", "alice"],
+      "paths": ["app/greeting.py"],
+      "project_slug": "apollo",
+      "revision": 0,
+      "state": "ready",
+      "title": "Complete greeting response",
+      "updated_at": "2026-09-01T08:00:00Z"
+    },
+    "apollo-T-0002": {
+      "acceptance_criteria": ["Health response reports ok."],
+      "assignee": null,
+      "blocking_question_ids": [],
+      "created_at": "2026-09-01T08:00:01Z",
+      "created_by": "human:demo-manager",
+      "dependencies": [],
+      "description": "Implement the deterministic health response.",
+      "id": "apollo-T-0002",
+      "labels": ["demo", "bob"],
+      "paths": ["app/health.py"],
+      "project_slug": "apollo",
+      "revision": 0,
+      "state": "ready",
+      "title": "Complete health response",
+      "updated_at": "2026-09-01T08:00:01Z"
+    }
+  },
   "project_slug": "apollo",
-  "revision": 0,
+  "revision": 1,
   "schema_version": "1.0"
 }
-

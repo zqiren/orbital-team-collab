@@ -1,0 +1,15 @@
+{
+  "description": "Deterministic UI/event fallback only; this is not evidence of a live agent run.",
+  "events": [
+    "task.claimed",
+    "report.submitted",
+    "integration.merged",
+    "knowledge.applied",
+    "integration.completed"
+  ],
+  "project_slug": "apollo",
+  "tasks": {
+    "apollo-T-0001": "done",
+    "apollo-T-0002": "done"
+  }
+}

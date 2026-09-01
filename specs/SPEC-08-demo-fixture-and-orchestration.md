@@ -1,7 +1,7 @@
 ---
 id: SPEC-08
 title: Demo Fixture & Multi-agent Orchestration
-status: Planned
+status: Done
 depends_on: [SPEC-03, SPEC-05, SPEC-06, SPEC-07]
 unlocks: [SPEC-09]
 ---
@@ -103,14 +103,14 @@ unlocks: [SPEC-09]
 
 ## Completion Record
 
-- Final status: —
-- Outcome achieved:
-- Files changed:
-- Verification run:
-- Verification result:
-- Deviations from spec:
-- Decisions recorded:
-- Lessons recorded:
-- Known limitations:
-- Working tree / commit:
-- Next spec readiness:
+- Final status: Done
+- Outcome achieved: 交付完全离线、可重置的 Apollo 演示组装层。`doctor/setup/start/status/reset/replay` 从版本化 seed/sample/IM fixture 创建临时 canonical Git repo 与 Alice/Bob linked worktree，调用现有 Member Skill installer 与 worktree-bound `MemberWorkflow`；两个 `subprocess.Popen` 成员在文件 barrier 后并行 claim/start/commit/report，`teamd` 使用扩展到 integration/knowledge 两 phase 的 builtin Manager 串行完成受控代码 merge、Knowledge Proposal、独立 knowledge commit、Task/Job Done 与 `integration.completed`，最后由既有 Dashboard projection 观察。Potential Task/Open Question 始终与两个 Confirmed Tasks 分离，Promote 只生成 Draft。reset 同时验证 D14 runtime marker 与绑定精确 resolved temp root 的私有 marker，连续两次从 clean seed 重放通过；replay 强制标记 `simulated-replay` / `live_success=false`。
+- Files changed: 新增 `src/orbital_team/demo_orchestration.py`、`demo/scripts/team_demo.py`、`demo/sample-app/`、`demo/im-fixtures/demo-messages.json`、`demo/replay/dashboard.json`、`tests/test_demo_orchestration.py`、`docs/37-demo-fixture-and-orchestration.md`、`orbital/PROJECT_STATE_ARCHIVE.md`；更新 `src/orbital_team/manager_proc.py`、`demo/runners/builtin.json`、`demo/seed/{seed.json,tasks.json,README.md}`、Spec Index、本 spec 与 Orbital state/index。
+- Verification run: `python3 demo/scripts/team_demo.py doctor`；临时根 smoke：`python3 demo/scripts/team_demo.py setup --root <mktemp-path>` → `start` → `status` → `reset`；`python3 -m pytest -q tests/test_demo_orchestration.py`；`python3 -m pytest -q`。
+- Verification result: doctor 报 builtin integration/knowledge 可用；实际 smoke 产生 2 reports、2 Done Integration Jobs、2 knowledge summaries、2 `integration.completed`，随后精确 temp root cleanup；SPEC-08 专项 7 passed in 27.29s；全量 107 passed in 111.94s（基线 100，新增 7）。
+- Deviations from spec: 当前 sandbox 未完成真实 Claude/Codex 外部 agent live rehearsal：过去已验证 nested Codex provider 初始化 EPERM，且本轮不把 CLI 存在或 deterministic builtin 冒充外部 LLM agent；该项明确留 SPEC-09 在普通 provider 环境复测。Dashboard 因 sandbox 禁止 loopback `socket.bind` 未做真实 browser/socket rehearsal，本轮使用同一 `DashboardProjection` 并输出可在普通本机执行的精确 loopback argv/URL。其余 In/Out of Scope 无偏离。
+- Decisions recorded: 无新冻结产品决定；沿用 D12/D13/D14/D15。builtin knowledge phase 仍只调用 SPEC-05 受控 Proposal/apply 边界，不改变冻结契约。
+- Lessons recorded: 无新增通用坑；测试直接应用既有 `sandbox-processpool-semaphore`（Popen + barrier）、`sandbox-loopback-listen-eperm` 与 `manager-runner-process-tree-timeout` playbook。
+- Known limitations: builtin 是稳定的真实 subprocess/domain/Git pipeline，但其知识编译策略为确定性 PROJECT_STATE entry，不等同外部 LLM 判断；外部 runner 依赖对应本地 CLI/provider；reset 成功后删除的精确临时根不可恢复；sample app 与 IM 均为 synthetic fixture；未接真实 IM、remote Git、网络服务或 push。
+- Working tree / commit: 按 session 硬约束未 commit/push、未手改交付 repo `.git`；全部实现与 handoff 留工作树供主 session 复测/checkpoint。
+- Next spec readiness: SPEC-09 Ready；其 clean-clone/final delivery 阶段应补普通本机 Dashboard socket/browser 与真实外部 Manager/Member agent rehearsal，并收敛最终 README。
