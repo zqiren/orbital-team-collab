@@ -86,6 +86,14 @@ def _fsync_directory(path: Path) -> None:
 
 
 def atomic_write_json(path: Path, value: Any) -> None:
+    atomic_write_private_bytes(path, canonical_json(value, newline=True))
+
+
+def atomic_write_private_text(path: Path, value: str) -> None:
+    atomic_write_private_bytes(path, value.encode("utf-8"))
+
+
+def atomic_write_private_bytes(path: Path, payload: bytes) -> None:
     secure_directory(path.parent)
     temporary = path.with_name(
         f".{path.name}.tmp-{os.getpid()}-{os.urandom(8).hex()}"
@@ -96,7 +104,6 @@ def atomic_write_json(path: Path, value: Any) -> None:
         PRIVATE_FILE_MODE,
     )
     try:
-        payload = canonical_json(value, newline=True)
         with os.fdopen(descriptor, "wb", closefd=True) as stream:
             descriptor = -1
             stream.write(payload)

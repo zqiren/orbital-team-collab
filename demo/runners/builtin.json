@@ -1,0 +1,7 @@
+{
+  "kind": "orbital-team-runner",
+  "agent_type": "builtin-scripted-manager",
+  "argv": ["python3", "-m", "orbital_team.manager_proc"],
+  "pass_request_as": "argument",
+  "notes": "Deterministic scripted manager shipped with the runtime; fully verifiable offline."
+}

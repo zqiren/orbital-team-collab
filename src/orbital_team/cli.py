@@ -7,6 +7,7 @@ import sys
 from typing import Sequence, TextIO
 
 from .errors import TeamRuntimeError
+from .manager_integration import ManagerIntegrationWorkflow
 from .member_workflow import DEFAULT_CONTEXT_BUDGET, MemberWorkflow
 from .runtime import RuntimeManager
 
@@ -98,6 +99,51 @@ def _parser() -> argparse.ArgumentParser:
     question_list = question_commands.add_parser("list", help="list project questions")
     question_list.add_argument("--project", required=True)
     question_list.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+
+    manager = commands.add_parser("manager", help="manager integration commands")
+    manager_commands = manager.add_subparsers(dest="manager_command", required=True)
+    inbox = manager_commands.add_parser("inbox", help="pending reports and jobs")
+    inbox.add_argument("--project")
+    inbox.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    review = manager_commands.add_parser("review", help="read-only review packet")
+    review.add_argument("job_id")
+    review.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    merge = manager_commands.add_parser(
+        "merge", help="guarded merge of the job's bound report commit"
+    )
+    merge.add_argument("job_id")
+    merge.add_argument("--expected-head", required=True)
+    merge.add_argument(
+        "--validation",
+        action="append",
+        default=[],
+        help="JSON object with command/outcome/summary; repeat for multiple checks",
+    )
+    merge.add_argument("--request-id")
+    merge.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    request_changes = manager_commands.add_parser(
+        "request-changes", help="end the job with structured requested changes"
+    )
+    request_changes.add_argument("job_id")
+    request_changes.add_argument("--change", action="append", default=[], required=True)
+    request_changes.add_argument("--reason")
+    request_changes.add_argument("--request-id")
+    request_changes.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    block = manager_commands.add_parser(
+        "block", help="block the job and open a linked Open Question"
+    )
+    block.add_argument("job_id")
+    block.add_argument("--reason", required=True)
+    block.add_argument("--question", required=True)
+    block.add_argument("--owner")
+    block.add_argument("--request-id")
+    block.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    resume = manager_commands.add_parser(
+        "resume", help="requeue an integration-blocked job once resolved"
+    )
+    resume.add_argument("job_id")
+    resume.add_argument("--request-id")
+    resume.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
     return parser
 
 
@@ -204,6 +250,41 @@ def main(argv: Sequence[str] | None = None) -> int:
             result = MemberWorkflow(arguments.workspace).list_questions(
                 arguments.project
             )
+        elif arguments.command == "manager":
+            integration = ManagerIntegrationWorkflow(arguments.workspace)
+            if arguments.manager_command == "inbox":
+                result = integration.inbox(arguments.project)
+            elif arguments.manager_command == "review":
+                result = integration.review_packet(arguments.job_id)
+            elif arguments.manager_command == "merge":
+                result = integration.merge_job(
+                    arguments.job_id,
+                    expected_head=arguments.expected_head,
+                    validation=_validation_values(arguments.validation),
+                    request_id=arguments.request_id,
+                )
+            elif arguments.manager_command == "request-changes":
+                result = integration.request_changes(
+                    arguments.job_id,
+                    arguments.change,
+                    reason=arguments.reason,
+                    request_id=arguments.request_id,
+                )
+            elif arguments.manager_command == "block":
+                result = integration.block_job(
+                    arguments.job_id,
+                    arguments.reason,
+                    question=arguments.question,
+                    owner=arguments.owner,
+                    request_id=arguments.request_id,
+                )
+            elif arguments.manager_command == "resume":
+                result = integration.resume_job(
+                    arguments.job_id, request_id=arguments.request_id
+                )
+            else:  # pragma: no cover
+                parser.error("unknown manager command")
+                return 2
         else:  # pragma: no cover - argparse makes this unreachable
             parser.error("unknown command")
             return 2

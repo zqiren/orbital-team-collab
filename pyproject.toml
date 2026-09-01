@@ -14,10 +14,13 @@ dependencies = [
 
 [project.scripts]
 teamctl = "orbital_team.cli:main"
+teamd = "orbital_team.teamd:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+orbital_team = ["skills/*.md"]
+
 [tool.setuptools.data-files]
 "share/orbital-team/schemas/v1" = ["schemas/v1/orbital-team.schema.json"]
-

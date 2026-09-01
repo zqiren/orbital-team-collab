@@ -1,7 +1,7 @@
 ---
 id: SPEC-04
 title: Event-driven Manager Integration
-status: Planned
+status: Done
 depends_on: [SPEC-02]
 unlocks: [SPEC-05, SPEC-07]
 ---
@@ -117,14 +117,14 @@ Runner 实现不得把 provider session 作为事实来源；重试必须重新�
 
 ## Completion Record
 
-- Final status: —
-- Outcome achieved:
-- Files changed:
-- Verification run:
-- Verification result:
-- Deviations from spec:
-- Decisions recorded:
-- Lessons recorded:
-- Known limitations:
-- Working tree / commit:
-- Next spec readiness:
+- Final status: Done
+- Outcome achieved: 实现 `teamd` event tail/watch + 文件态重启恢复、deterministic Integration Job/record、project Manager execution lock 与 Git mutation lock、可替换 `ManagerRunner`/manifest、Task-aware private brief、受控本地 merge、Manager inbox/review/merge/request-changes/block/resume 命令，以及 merged → mechanical Knowledge Pack → Awaiting Knowledge 边界；未实现 SPEC-05 knowledge apply。
+- Files changed: 新增 `src/orbital_team/manager_integration.py`、`manager_runner.py`、`manager_proc.py`、`teamd.py`、`skills/manager-integration.md`、`demo/runners/{builtin,codex,claude-code}.json`、`tests/test_manager_integration.py`、`docs/33-event-driven-manager-integration.md`；扩展 `storage.py`、`cli.py`、`errors.py`、`__init__.py`、`pyproject.toml` 及 handoff memory/index。
+- Verification run: `python3 -m pytest -q tests/test_manager_integration.py`；`python3 -m pytest -q`；`python3 -m compileall -q src tests`；临时 Git repo 中通过 `CommandManagerRunner` 执行真实 clean merge/冲突/validation/replay/crash；两次临时 repo Codex manifest smoke（60/180 秒上限）；`GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null git diff --check`。
+- Verification result: SPEC-04 专项 12/12、全量 62/62 通过；两个 Report 按提交顺序串行，重放只有一个 Job/merge event，runner crash 可重试，Job 已写但 Task/event 未写和 merge 已写但 result 未写两类崩溃均恢复；失败测试不进入 Done；仅发 `integration.merged`/`knowledge.prepared`，未发 `integration.completed`。内置 subprocess runner 完成真实受控 merge。Codex CLI 能启动但嵌套 app-server 初始化被 sandbox 以 `Operation not permitted` 拒绝，未伪造外部 agent 成功。
+- Deviations from spec: 无产品契约、schema、依赖或范围偏离；In Scope 的 “integrate” 动作用冻结协议命名 `teamctl manager merge` 实现。POSIX timeout 使用进程组强制终止；非 POSIX 保留直接进程 fallback。
+- Decisions recorded: 无新增产品决定；实现遵循 D11–D15。
+- Lessons recorded: runner timeout 必须终止进程组；teamd 恢复必须扫描 Job/Task/event canonical files，不能只依赖 cursor 或 pending Report。
+- Known limitations: 外部 Codex agent smoke 受当前嵌套 sandbox app-server EPERM 阻塞；Claude CLI 不可用。Provider manifest 的 agent 行为仍依赖其本地 sandbox/exec policy，domain 层只信任 schema result 与受控 merge command。非 POSIX 子进程组终止未在本 session 实测。
+- Working tree / commit: 实现、测试和 handoff 均完成并保持未提交；按用户硬约束未 commit/push、未写 `.git`。
+- Next spec readiness: SPEC-05 已 Ready；SPEC-06 仍 Ready（未 Done），因此 SPEC-07 依赖未齐，保持 Planned。

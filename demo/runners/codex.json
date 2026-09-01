@@ -1,0 +1,15 @@
+{
+  "kind": "orbital-team-runner",
+  "agent_type": "codex",
+  "argv": [
+    "codex",
+    "exec",
+    "--sandbox",
+    "workspace-write",
+    "--ephemeral",
+    "--ignore-user-config",
+    "Read the manager run request JSON at {request_path}. Follow the Manager Skill at manager_skill_path exactly: review the bound diff, run the allowed validation command, merge only via the controlled teamctl manager merge policy, and write one schema-valid managerRunResult JSON to result_path."
+  ],
+  "pass_request_as": "placeholder",
+  "notes": "Manifest stub for the Codex CLI. Requires a local `codex` install; the structured result file, not stdout, drives state."
+}
