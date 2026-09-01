@@ -380,6 +380,36 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual("E_CORRUPT_RUNTIME", raised.exception.code)
         self.assertEqual(before, tasks_path.read_bytes())
 
+    def test_file_projection_lists_canonical_tree_and_refuses_escapes(self) -> None:
+        (self.repo.repository / "app").mkdir()
+        (self.repo.repository / "app" / "module.py").write_text("VALUE = 1\n", encoding="utf-8")
+
+        listing = self.projection.file_tree("apollo", "")
+        names = [entry["name"] for entry in listing["entries"]]
+        self.assertIn("app", names)
+        self.assertIn("tracked.txt", names)
+        self.assertNotIn(".git", names)
+        self.assertEqual("directory", listing["entries"][0]["type"])
+
+        nested = self.projection.file_tree("apollo", "app")
+        self.assertEqual(
+            [{"name": "module.py", "size": 10, "type": "file"}], nested["entries"]
+        )
+
+        content = self.projection.file_content("apollo", "app/module.py")
+        self.assertTrue(content["available"])
+        self.assertEqual("VALUE = 1\n", content["content"])
+        self.assertNotIn("sensitive_local_data", content)
+
+        for escape in ("..", "../outside", "/etc", ".git", ".git/config"):
+            with self.assertRaises(TeamRuntimeError) as raised:
+                self.projection.file_tree("apollo", escape)
+            self.assertIn(raised.exception.code, {"E_USAGE", "E_TASK_NOT_FOUND"})
+        with self.assertRaises(TeamRuntimeError):
+            self.projection.file_content("apollo", "")
+        with self.assertRaises(TeamRuntimeError):
+            self.projection.file_content("apollo", "../outside")
+
     def test_static_assets_have_accessible_landmarks_and_no_direct_json_writes(self) -> None:
         static = REPO_ROOT / "src" / "orbital_team" / "dashboard_static"
         html = (static / "index.html").read_text(encoding="utf-8")

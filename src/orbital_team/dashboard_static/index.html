@@ -8,82 +8,142 @@
     <link rel="stylesheet" href="/assets/styles.css">
   </head>
   <body>
-    <a class="skip-link" href="#main">Skip to dashboard content</a>
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">Git-native Team Workspace</p>
-        <h1>Team Dashboard</h1>
-      </div>
-      <label>Project
-        <select id="project-select" aria-describedby="refresh-status"></select>
-      </label>
-      <div id="actor-badge" class="badge"></div>
-    </header>
-    <nav aria-label="Dashboard views">
-      <a href="#overview">Overview</a>
-      <a href="#tasks">Tasks</a>
-      <a href="#potential">Potential Tasks</a>
-      <a href="#questions">Open Questions</a>
-      <a href="#activity">Activity &amp; Knowledge</a>
-    </nav>
-    <div id="error-banner" class="error" role="alert" hidden></div>
-    <p id="refresh-status" class="status" aria-live="polite">Loading runtime files…</p>
-    <main id="main">
-      <section id="overview" aria-labelledby="overview-title">
-        <h2 id="overview-title">Overview</h2>
-        <div id="overview-content" class="grid"></div>
-      </section>
-      <section id="tasks" aria-labelledby="tasks-title">
-        <div class="section-heading">
-          <h2 id="tasks-title">Confirmed Tasks</h2>
-          <p>Draft/Ready execution commitments. Potential Tasks remain separate.</p>
+    <a class="skip-link" href="#main" data-i18n="skip">Skip to dashboard content</a>
+    <div class="shell">
+      <nav class="nav-col" aria-label="Workspace">
+        <div class="nav-brand">
+          <p class="eyebrow">Orbital</p>
+          <h1 data-i18n="brand">Team Workspace</h1>
         </div>
-        <form id="task-form" class="command-form">
-          <h3>Add Draft Task</h3>
-          <label>Title <input name="title" required maxlength="200"></label>
-          <label>Description <textarea name="description" rows="2"></textarea></label>
-          <label>Acceptance criteria <input name="acceptance" placeholder="One criterion"></label>
-          <button type="submit">Add Draft Task</button>
-        </form>
-        <div id="task-board" class="kanban" aria-live="polite"></div>
-      </section>
-      <section id="potential" aria-labelledby="potential-title">
-        <div class="section-heading">
-          <h2 id="potential-title">Potential Tasks</h2>
-          <p>Evidence-backed candidates; Promote always creates a Draft Task.</p>
+        <p class="nav-label" id="projects-label" data-i18n="projects">Projects</p>
+        <ul id="project-list" class="project-list" aria-labelledby="projects-label"></ul>
+        <div class="nav-foot">
+          <div class="lang-toggle" role="group" aria-label="Language / 语言">
+            <button type="button" id="lang-en" class="lang-option">English</button>
+            <button type="button" id="lang-zh" class="lang-option">中文</button>
+          </div>
+          <div id="actor-badge" class="actor-badge"></div>
+          <p id="refresh-status" class="nav-status" aria-live="polite">Loading runtime files…</p>
+          <p class="nav-note"><strong data-i18n="localOnly">Local-only data.</strong> <span data-i18n="localOnlyBody">Run logs and optional transcripts stay in the private local runtime and are never committed to Git.</span></p>
         </div>
-        <div id="potential-list" class="stack"></div>
-      </section>
-      <section id="questions" aria-labelledby="questions-title">
-        <div class="section-heading">
-          <h2 id="questions-title">Open Questions</h2>
-          <p>Blocking questions remain visible on related Tasks.</p>
+      </nav>
+      <main id="main">
+        <div id="error-banner" class="error-banner" role="alert" hidden></div>
+        <header class="project-head">
+          <div class="project-head-text">
+            <h2 id="project-title">…</h2>
+            <p id="project-meta" class="project-meta"></p>
+          </div>
+          <div id="manager-chip" class="manager-chip"></div>
+        </header>
+        <section class="agents-band" aria-labelledby="agents-title">
+          <div class="band-head">
+            <h3 id="agents-title" class="band-label" data-i18n="agents">Agents</h3>
+            <button type="button" id="onboard-toggle" class="btn btn-quiet btn-small" data-i18n="onboard.add">+ Add member</button>
+          </div>
+          <div id="agent-strip" class="agent-strip"></div>
+          <div id="onboard-card" class="composer" hidden>
+            <p class="card-body" data-i18n="onboard.hint">Run this in the new member's terminal, from anywhere with access to this machine. Registration binds their identity to the worktree; the project owner runs the join line.</p>
+            <div class="composer-grid">
+              <label><span data-i18n="onboard.memberId">Member ID</span> <input id="onboard-member" maxlength="64" placeholder="carol" autocomplete="off"></label>
+              <label><span data-i18n="onboard.agentType">Agent</span>
+                <select id="onboard-agent">
+                  <option value="claude-code">claude-code</option>
+                  <option value="codex">codex</option>
+                  <option value="generic">generic</option>
+                </select>
+              </label>
+            </div>
+            <pre id="onboard-command"></pre>
+            <div class="composer-actions">
+              <button type="button" id="onboard-copy" class="btn btn-primary" data-i18n="onboard.copy">Copy command</button>
+              <button type="button" id="onboard-close" class="btn" data-i18n="form.cancel">Cancel</button>
+            </div>
+          </div>
+        </section>
+        <div class="tabbar" role="tablist" aria-label="Project views">
+          <button type="button" class="tab" role="tab" id="tab-board" aria-controls="panel-board" aria-selected="true"><span data-i18n="tab.board">Board</span></button>
+          <button type="button" class="tab" role="tab" id="tab-inbox" aria-controls="panel-inbox" aria-selected="false"><span data-i18n="tab.inbox">Inbox</span><span id="inbox-count" class="tab-count" hidden></span></button>
+          <button type="button" class="tab" role="tab" id="tab-questions" aria-controls="panel-questions" aria-selected="false"><span data-i18n="tab.questions">Questions</span><span id="question-count" class="tab-count" hidden></span></button>
+          <button type="button" class="tab" role="tab" id="tab-files" aria-controls="panel-files" aria-selected="false"><span data-i18n="tab.files">Files</span></button>
+          <button type="button" class="tab" role="tab" id="tab-activity" aria-controls="panel-activity" aria-selected="false"><span data-i18n="tab.activity">Activity</span></button>
         </div>
-        <form id="question-form" class="command-form">
-          <h3>Add Open Question</h3>
-          <label>Question <input name="question" required></label>
-          <label>Owner <input name="owner" required value="human:default-manager"></label>
-          <label>Related Task ID <input name="task_id" placeholder="apollo-T-0001"></label>
-          <label class="checkbox"><input name="blocking" type="checkbox"> Blocking</label>
-          <button type="submit">Add Question</button>
-        </form>
-        <div id="question-list" class="stack"></div>
-      </section>
-      <section id="activity" aria-labelledby="activity-title">
-        <div class="section-heading">
-          <h2 id="activity-title">Activity &amp; Knowledge</h2>
-          <p>Events and schema-valid canonical knowledge summaries reconstructed from files.</p>
+        <section id="panel-board" class="panel" role="tabpanel" aria-labelledby="tab-board">
+          <div class="panel-intro">
+            <p data-i18n="board.intro">Tasks move left to right. Drag a Backlog card onto Ready to release it to the agents, or click any card for details — every other move is made by the agents themselves.</p>
+            <button type="button" id="composer-toggle" class="btn btn-primary" data-i18n="board.newTask">New draft task</button>
+          </div>
+          <form id="task-form" class="composer" hidden>
+            <div class="composer-grid">
+              <label><span data-i18n="form.title">Title</span> <input name="title" required maxlength="200" data-i18n-placeholder="form.titlePh" placeholder="What needs to happen?"></label>
+              <label><span data-i18n="form.description">Description</span> <textarea name="description" rows="2" data-i18n-placeholder="form.descriptionPh" placeholder="Optional context for the member who claims it"></textarea></label>
+              <label><span data-i18n="form.acceptance">Acceptance criterion</span> <input name="acceptance" data-i18n-placeholder="form.acceptancePh" placeholder="Optional — one observable outcome"></label>
+            </div>
+            <div class="composer-actions">
+              <button type="submit" class="btn btn-primary" data-i18n="form.addToBacklog">Add to Backlog</button>
+              <button type="button" id="composer-cancel" class="btn" data-i18n="form.cancel">Cancel</button>
+            </div>
+          </form>
+          <div id="task-board" class="kanban" aria-live="polite"></div>
+        </section>
+        <section id="panel-inbox" class="panel" role="tabpanel" aria-labelledby="tab-inbox" hidden>
+          <div class="panel-intro">
+            <p data-i18n="inbox.intro">Evidence-backed candidates captured from IM context. Triage, then promote to a Draft Task, convert to a question, or dismiss — nothing here starts work by itself.</p>
+          </div>
+          <div id="potential-list" class="stack"></div>
+        </section>
+        <section id="panel-questions" class="panel" role="tabpanel" aria-labelledby="tab-questions" hidden>
+          <div class="panel-intro">
+            <p data-i18n="questions.intro">Blocking questions hold their related Tasks in place until answered. Type an answer directly on the card.</p>
+          </div>
+          <form id="question-form" class="composer composer-static">
+            <div class="composer-grid">
+              <label><span data-i18n="form.question">Question</span> <input name="question" required data-i18n-placeholder="form.questionPh" placeholder="What must be decided?"></label>
+              <label><span data-i18n="form.owner">Owner</span> <input name="owner" required value="human:default-manager"></label>
+              <label><span data-i18n="form.relatedTask">Related Task ID</span> <input name="task_id" placeholder="apollo-T-0001"></label>
+              <label class="checkbox"><input name="blocking" type="checkbox"> <span data-i18n="form.blocking">Blocking</span></label>
+            </div>
+            <div class="composer-actions">
+              <button type="submit" class="btn btn-primary" data-i18n="form.addQuestion">Add question</button>
+            </div>
+          </form>
+          <div id="question-list" class="stack"></div>
+        </section>
+        <section id="panel-files" class="panel" role="tabpanel" aria-labelledby="tab-files" hidden>
+          <div class="panel-intro">
+            <p data-i18n="files.intro">Read-only view of the canonical workspace — the code and the orbital/ project memory that agents merge into.</p>
+            <button type="button" id="files-refresh" class="btn" data-i18n="files.refresh">Refresh</button>
+          </div>
+          <div class="files-split">
+            <div id="file-tree" class="file-tree" role="tree" aria-label="Canonical workspace files"></div>
+            <div id="file-preview" class="file-preview"></div>
+          </div>
+        </section>
+        <section id="panel-activity" class="panel" role="tabpanel" aria-labelledby="tab-activity" hidden>
+          <div class="activity-split">
+            <div>
+              <h3 class="band-label" data-i18n="activity.feed">Activity feed</h3>
+              <ol id="activity-list" class="timeline"></ol>
+            </div>
+            <div class="activity-side">
+              <h3 class="band-label" data-i18n="activity.knowledge">Knowledge changes</h3>
+              <div id="knowledge-list" class="stack"></div>
+              <h3 class="band-label" data-i18n="activity.runs">Manager runs</h3>
+              <div id="run-list" class="stack"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <div id="task-drawer" class="drawer-backdrop" hidden>
+      <aside class="drawer" role="dialog" aria-labelledby="drawer-title" aria-modal="true">
+        <div class="drawer-head">
+          <h3 id="drawer-title"></h3>
+          <button type="button" id="drawer-close" class="btn btn-quiet" aria-label="Close">✕</button>
         </div>
-        <div class="split">
-          <div><h3>Activity Feed</h3><ol id="activity-list" class="timeline"></ol></div>
-          <div><h3>Knowledge Changes</h3><div id="knowledge-list" class="stack"></div></div>
-        </div>
-      </section>
-    </main>
-    <footer>
-      <strong>Local-only data.</strong> Run logs and optional transcripts are sensitive,
-      remain in the private local runtime, and are not committed to Git.
-    </footer>
+        <div id="drawer-body" class="drawer-body"></div>
+      </aside>
+    </div>
     <script type="module" src="/assets/app.js"></script>
   </body>
 </html>

@@ -98,6 +98,26 @@ python3 demo/scripts/team_demo.py reset --root "$DEMO_ROOT"
 `reset` 会验证 runtime marker 与绑定 exact resolved root 的 demo marker；成功删除不可恢复，
 不要把 home、repo root 或宽泛目录当参数。
 
+## Team Dashboard
+
+Dashboard 仍是共享 runtime 的 loopback projection 加受控 Human 写入口；前端遵循 Orbital 的
+设计语言（三级 surface ladder、azure accent、Geist 字型栈），信息层级为：
+
+- 左侧项目列表 → 项目页顶部 Agents 实时状态条：谁在做哪个任务、Manager 是否在集成。
+- **看板**：六列状态投影（待办/就绪/进行中/审核中/已阻塞/已完成）。人类唯一合法操作是把
+  「待办」草稿拖入「就绪」释放给 agent 认领（等价 `task.ready`）；点击卡片打开详情抽屉
+  （描述、验收标准、Report 验证证据、集成任务、阻塞问题）。其余流转全部由 Member/Manager
+  事件驱动，看板只是实时投影。
+- **收件箱 / 问题**：Potential Task 分诊（Promote 永远只产生 Draft），Open Question 卡片
+  行内输入答案。
+- **文件**：canonical 工作区的只读文件树与预览（`orbital/` 项目记忆高亮、懒加载、
+  64KB 截断、路径逃逸/symlink/.git 防护）。
+- Agents 条上的「+ Add member」按输入的成员 ID 生成可复制注册命令（`git worktree add` →
+  `teamctl member join` → member adapter 安装）；注册后该 worktree 中的 Claude Code 会话
+  即获得 `/team claim|start|report|block|status|questions|manager` 语法，身份始终来自
+  worktree 绑定。
+- 界面支持 English / 中文 切换（localStorage 持久化，zh* 浏览器默认中文）。
+
 ## Runner 与 replay
 
 默认 `builtin` 是可重复的离线 scripted Manager。要使用已有外部 CLI，先检查环境：
@@ -108,7 +128,13 @@ python3 demo/scripts/team_demo.py doctor --runner claude-code
 ```
 
 CLI 文件存在不等于 provider sandbox 可运行；只有真实产生 schema result、受控 merge 与 knowledge
-apply 才算 live rehearsal。缺少 agent 时可以看 replay，但输出会明确说明它只是 UI/event fallback：
+apply 才算 live rehearsal。`claude-code` runner 已在 macOS 上完成一次真实 rehearsal：真实成员在
+worktree 中 claim/commit/report，headless `claude -p` 作为 Manager 通过受控命令完成 validation、
+merge 与 knowledge proposal。两个使之可复现的细节：runner 环境透传 `USER`（macOS Keychain 凭据
+按账户名解析，缺失时 CLI 报 not logged in），manifest 预授权 headless 工具集
+（`--allowedTools Bash,Read,Write,Edit,Glob,Grep --strict-mcp-config`）。
+
+缺少 agent 时可以看 replay，但输出会明确说明它只是 UI/event fallback：
 
 ```bash
 python3 demo/scripts/team_demo.py replay

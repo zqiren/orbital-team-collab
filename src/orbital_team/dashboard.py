@@ -10,7 +10,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from .constants import SCHEMA_VERSION
 from .errors import TeamRuntimeError
@@ -32,6 +32,8 @@ STATIC_ROOT = Path(__file__).with_name("dashboard_static")
 MAX_REQUEST_BYTES = 64 * 1024
 MAX_LOG_BYTES = 64 * 1024
 MAX_PREVIEW_BYTES = 8 * 1024
+MAX_FILE_BYTES = 64 * 1024
+MAX_TREE_ENTRIES = 500
 KNOWLEDGE_PATHS = {
     "orbital/PROJECT_STATE.md",
     "orbital/DECISIONS.md",
@@ -89,6 +91,18 @@ def _read_bounded(root: Path, relative: str, limit: int) -> dict[str, Any]:
         "sensitive_local_data": True,
         "truncated": truncated,
     }
+
+
+def _member_installer_path() -> str | None:
+    """Absolute path of the member-adapter installer, when running from a checkout."""
+    installer = (
+        Path(__file__).resolve().parents[2]
+        / "skills"
+        / "orbital-team-member"
+        / "scripts"
+        / "install_adapter.py"
+    )
+    return os.fspath(installer) if installer.is_file() else None
 
 
 def _read_run_log(
@@ -257,6 +271,7 @@ class DashboardProjection:
                 "runner": self._runner_status(project),
                 "slot_busy": any(job["state"] in {"queued", "running", "retryable"} for job in jobs),
             },
+            "member_installer": _member_installer_path(),
             "members": sorted(members["items"].values(), key=lambda item: item["id"]),
             "open_questions": sorted(questions["items"].values(), key=lambda item: item["id"]),
             "potential_tasks": sorted(potentials["items"].values(), key=lambda item: item["id"]),
@@ -289,6 +304,68 @@ class DashboardProjection:
             self.runtime_root / "projects" / slug, run_id, relative, MAX_LOG_BYTES
         )
         return {"kind": kind, "run_id": run_id, **result}
+
+    # ------------------------------------------------------------------
+    # canonical workspace files (read-only projection, like the run logs)
+    # ------------------------------------------------------------------
+
+    def _canonical_tree_target(self, slug: str, relative: str) -> tuple[Path, Path]:
+        if not PROJECT_PATTERN.fullmatch(slug):
+            raise TeamRuntimeError("E_TASK_NOT_FOUND", "Project was not found.")
+        _, project = self._project(slug)
+        root = Path(project["canonical_workspace"]).resolve()
+        candidate = Path(relative) if relative else Path(".")
+        if candidate.is_absolute() or ".." in candidate.parts or ".git" in candidate.parts:
+            raise TeamRuntimeError(
+                "E_USAGE", "File path must stay inside the canonical workspace."
+            )
+        target = (root / candidate).resolve()
+        if target != root and root not in target.parents:
+            raise TeamRuntimeError(
+                "E_USAGE", "File path must stay inside the canonical workspace."
+            )
+        return root, target
+
+    def file_tree(self, slug: str, relative: str) -> dict[str, Any]:
+        root, target = self._canonical_tree_target(slug, relative)
+        if target.is_symlink() or not target.is_dir():
+            raise TeamRuntimeError("E_TASK_NOT_FOUND", "Directory was not found.")
+        entries: list[dict[str, Any]] = []
+        try:
+            children = sorted(target.iterdir(), key=lambda item: item.name)
+        except OSError:
+            raise TeamRuntimeError("E_TASK_NOT_FOUND", "Directory was not found.")
+        for child in children:
+            if child.name == ".git" or child.is_symlink():
+                continue
+            if len(entries) >= MAX_TREE_ENTRIES:
+                break
+            if child.is_dir():
+                entries.append({"name": child.name, "type": "directory"})
+            elif child.is_file():
+                entries.append(
+                    {"name": child.name, "size": child.stat().st_size, "type": "file"}
+                )
+        entries.sort(key=lambda item: (item["type"] != "directory", item["name"]))
+        return {
+            "entries": entries,
+            "ok": True,
+            "path": os.fspath(target.relative_to(root)) if target != root else "",
+            "schema_version": SCHEMA_VERSION,
+        }
+
+    def file_content(self, slug: str, relative: str) -> dict[str, Any]:
+        root, target = self._canonical_tree_target(slug, relative)
+        if target == root:
+            raise TeamRuntimeError("E_TASK_NOT_FOUND", "File was not found.")
+        result = _read_bounded(root, os.fspath(target.relative_to(root)), MAX_FILE_BYTES)
+        result.pop("sensitive_local_data", None)
+        return {
+            "ok": True,
+            "path": os.fspath(target.relative_to(root)),
+            "schema_version": SCHEMA_VERSION,
+            **result,
+        }
 
 
 class DashboardAdapter:
@@ -480,7 +557,8 @@ def dashboard_handler(
             self.wfile.write(payload)
 
         def do_GET(self) -> None:
-            path = unquote(urlsplit(self.path).path)
+            split = urlsplit(self.path)
+            path = unquote(split.path)
             try:
                 if path == "/api/bootstrap":
                     self._json(HTTPStatus.OK, adapter.bootstrap())
@@ -492,6 +570,14 @@ def dashboard_handler(
                 if len(parts) == 7 and parts[:2] == ["api", "projects"] and parts[3] == "runs" and parts[5] == "logs":
                     self._json(HTTPStatus.OK, adapter.projection.run_log(parts[2], parts[4], parts[6]))
                     return
+                if len(parts) in (4, 5) and parts[:2] == ["api", "projects"] and parts[3] == "files":
+                    relative = parse_qs(split.query).get("path", [""])[0]
+                    if len(parts) == 4:
+                        self._json(HTTPStatus.OK, adapter.projection.file_tree(parts[2], relative))
+                        return
+                    if parts[4] == "content":
+                        self._json(HTTPStatus.OK, adapter.projection.file_content(parts[2], relative))
+                        return
                 if path == "/":
                     self._static("index.html")
                     return

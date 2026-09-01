@@ -201,6 +201,9 @@ class CommandManagerRunner:
             "HOME": os.environ.get("HOME", ""),
             "PATH": os.environ.get("PATH", ""),
             "PYTHONPATH": os.fspath(package_root),
+            # macOS keychain-backed CLIs (e.g. `claude`) resolve credentials by
+            # account name; without USER they report "not logged in".
+            "USER": os.environ.get("USER", ""),
         }
         if os.environ.get("ORBITAL_TEAM_SCHEMA"):
             environment["ORBITAL_TEAM_SCHEMA"] = os.environ["ORBITAL_TEAM_SCHEMA"]

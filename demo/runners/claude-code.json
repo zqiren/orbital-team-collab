@@ -7,8 +7,11 @@
     "-p",
     "Read the manager run request JSON at {request_path}. Follow its phase and the Manager Skill at manager_skill_path exactly, use only the declared command policies, and write one schema-valid managerRunResult JSON to result_path.",
     "--output-format",
-    "json"
+    "json",
+    "--allowedTools",
+    "Bash,Read,Write,Edit,Glob,Grep",
+    "--strict-mcp-config"
   ],
   "pass_request_as": "placeholder",
-  "notes": "Manifest stub for the Claude Code CLI. Requires a local `claude` install and appropriate permissions; the structured result file, not stdout, drives state."
+  "notes": "Claude Code CLI runner: headless -p mode with the tools the manager contract needs pre-allowed and MCP loading disabled. Requires a local `claude` install with credentials; the structured result file, not stdout, drives state. Validated live against a real member report."
 }
