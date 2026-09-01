@@ -25,9 +25,12 @@
 ## Runtime 实现
 - pyproject.toml — Python 3.11+ package、`teamctl` console entry 与 jsonschema/filelock 依赖声明
 - src/orbital_team/ — common-dir resolver、schema/models、atomic storage、events/idempotency、runtime lifecycle 与 CLI
+- src/orbital_team/member_workflow.py — current-worktree Member identity、Task resolve/state machine、原子 claim、Context Pack 与 Git-bound Report domain service
 - tests/test_runtime_kernel.py — SPEC-01 的临时 Git repo/worktree、并发、损坏恢复、reset 与权限验证
+- tests/test_member_workflow.py — SPEC-02 的双进程 claim、状态转换、blocking question、Git Report、schema、幂等与负向测试
 - demo/seed/ — schema-valid synthetic Apollo 初始化输入与显式 demo reset marker
 - docs/31-file-runtime-kernel.md — File Runtime Kernel 安装、运行、安全与验证说明
+- docs/32-member-workflow.md — Member join/claim/start/block/status/report 命令、Context Pack、Git binding 与稳定错误使用说明
 
 ## 规范 Schema（schemas/）
 - schemas/README.md — runtime 文件/对象与 JSON Schema `$defs` 的消费映射

@@ -34,6 +34,9 @@ class RuntimePaths:
 
 
 def _git(workspace: Path, *args: str) -> str:
+    environment = os.environ.copy()
+    environment["GIT_CONFIG_GLOBAL"] = "/dev/null"
+    environment["GIT_CONFIG_SYSTEM"] = "/dev/null"
     try:
         result = subprocess.run(
             ["git", "-C", os.fspath(workspace), *args],
@@ -41,6 +44,7 @@ def _git(workspace: Path, *args: str) -> str:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            env=environment,
         )
     except (OSError, subprocess.CalledProcessError) as exc:
         stderr = getattr(exc, "stderr", "") or ""
@@ -82,4 +86,3 @@ def resolve_runtime_paths(workspace: str | os.PathLike[str]) -> RuntimePaths:
             "E_GUARDRAIL_VIOLATION", "Resolved runtime path is not safe."
         )
     return RuntimePaths(candidate, repository, common, runtime)
-

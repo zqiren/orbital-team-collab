@@ -1,7 +1,7 @@
 ---
 id: SPEC-02
 title: /team Command & Member Workflow
-status: Planned
+status: Done
 depends_on: [SPEC-01]
 unlocks: [SPEC-03, SPEC-04]
 ---
@@ -104,14 +104,14 @@ teamctl question list --project <project-name>
 
 ## Completion Record
 
-- Final status: —
-- Outcome achieved:
-- Files changed:
-- Verification run:
-- Verification result:
-- Deviations from spec:
-- Decisions recorded:
-- Lessons recorded:
-- Known limitations:
-- Working tree / commit:
-- Next spec readiness:
+- Final status: Done
+- Outcome achieved: 实现 agent-neutral 的 Member workflow 与 `teamctl` 命令：当前 worktree identity join、Project/Task deterministic resolve、Draft/Ready 创建校验、原子 claim + bounded Context Pack、start/status/block/questions、Git-bound immutable Report 与完整 event/idempotency 链路。
+- Files changed: 新增 `src/orbital_team/member_workflow.py`、`tests/test_member_workflow.py`、`docs/32-member-workflow.md`；扩展 `cli.py`、`errors.py`、`paths.py`、`storage.py` 与 package export；更新本 spec、Spec Index 及 Orbital memory/index。
+- Verification run: `PYTHONPATH=src GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null python3 -m unittest tests.test_member_workflow -v`；`python3 -m unittest discover -s tests -v`；`python3 -m compileall -q src tests`；`python3 -m pip wheel --no-deps --no-build-isolation ...` 后在临时 venv 安装并运行 `teamctl --help`/加载 schema bundle；CLI help、依赖 import、凭证/绝对路径扫描与 `git diff --check`。
+- Verification result: SPEC-02 专项 26/26、全量 50/50 通过；两个独立 Python 进程经文件 barrier 同时 claim 同一 Ready Task，仅一个成功；歧义与 blocking question 均零副作用；`Claimed → Submitted`、非 assignee、错误 commit/branch 与 schema-invalid Report 均以稳定错误拒绝；Report 的 branch/base/commit/changed files/diff/validation 通过 schema 校验；相同 task/commit 只产生一个 Report/event；wheel 可安装且包含全部 48 个 `$defs`。
+- Deviations from spec: 无产品契约、命令语法、schema、依赖或范围偏离；同时实现冻结协议已列出的 Human/Manager `task create`/`task ready`，为专项 fixture 与后继 spec 提供合法 Draft → Ready 入口。当前环境缺少可选 `build` module，clean wheel 验证改用现有 `pip wheel --no-deps --no-build-isolation`，未增加依赖。
+- Decisions recorded: D15（CLI member actor 由 current worktree 的唯一 join binding 推导；join 固定 named branch/repo binding，后续 mutation 不接受可冒充的 member 参数）。
+- Lessons recorded: Python 3.13 沙箱禁止查询 POSIX semaphore 上限，`ProcessPoolExecutor` 初始化会报 `PermissionError`；跨进程测试改用两个 `subprocess.Popen` + 文件 barrier。
+- Known limitations: 本阶段只验证 macOS/POSIX 单机 Git worktree；member branch rename/rebind lifecycle 尚未实现；slash/Hook adapter、Manager integration、自动 runner、IM 与 Dashboard 分属后继 spec；Report 只收集调用方提供的 validation evidence，不自动执行任意项目命令。
+- Working tree / commit: 主 session 复测全量 50/50 通过后，已将本 spec/Index 置为 Done/Ready，并以 `feat: implement /team member workflow (SPEC-02)` 创建单一 checkpoint（hash 见 git log）；不 push。
+- Next spec readiness: SPEC-03 与 SPEC-04 已标 Ready，可在独立 session 冷启动执行；SPEC-06 保持 Ready。

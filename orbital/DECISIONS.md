@@ -65,3 +65,8 @@ Rejected: 只修改工作树却宣称 git-native；amend 成员/code merge；自
 Chosen: 后续 domain、CLI、daemon、adapter 统一复用 `src/orbital_team/` 单 package；规范 schema 仍以 `schemas/v1/orbital-team.schema.json` 为源，并作为 wheel data 安装。runtime 使用 `<git-common-dir>/orbital-team/.runtime-marker.json` 校验 kind/runtime/schema/demo 边界，版本化 seed 使用 `demo/seed/seed.json`；下游写入复用 `RegistryStore`、`ProjectStore`、`EventLog`、`RuntimeLock` 与 `IdempotencyGuard`，不得另建 JSON 写路径。
 Reason: SPEC-02～07 需要稳定的共享 storage 入口；marker 让 runtime-only reset 能验证精确目标，同时不把 runtime 或绝对 workspace 路径放进 Git。
 Rejected: 每个调用方自行读写 JSON；复制第二份可漂移 schema；仅凭目录名执行 reset。
+
+## D15 — Member CLI actor 绑定
+Chosen: `teamctl member join` 把 Member identity 绑定到当前 named-branch worktree；后续 claim/start/block/report 从当前 worktree 的唯一 binding 推导 `member:<id>` actor，不接受调用方传入可冒充的 `--member`。join 必须验证 worktree 与 Project canonical workspace 使用同一 Git common dir，并把 worktree 纳入 Project allowed roots。
+Reason: 冻结命令语法没有重复携带 member 参数，且 actor 不能只信任 agent 自报；worktree binding 同时给 SPEC-03 adapter 和 SPEC-04 Report/commit review 一个确定性的身份与 Git 边界。
+Rejected: 每次 mutation 接受任意 `--member`；按环境变量或 agent 自报 actor；让 slash adapter 另建 identity 状态。

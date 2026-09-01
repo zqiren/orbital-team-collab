@@ -25,3 +25,8 @@
 **What happened:** 构造 `$defs/memberStore` validator 时误把 schema bundle 顶层 `oneOf` 一起保留；四种空 store 结构相同，因此同时匹配多个分支并被错误拒绝。另一个首轮错误是确定性 UUIDv5 不符合冻结的 UUIDv4 schema pattern。
 **Do instead:** fragment validator 只携带 `$schema`、`$defs` 与目标 `$ref`，不继承 bundle 顶层 `oneOf`；需要稳定 event ID 时从 hash 派生 16 bytes 后显式设置 RFC 4122 v4/variant bits，并继续让 schema 做最终校验。
 **Keywords:** jsonschema, oneOf, defs, fragment, uuid4, idempotency
+
+### 2026-09-01 — sandbox-processpool-semaphore
+**What happened:** Python 3.13 的 `ProcessPoolExecutor` 初始化会调用 `os.sysconf("SC_SEM_NSEMS_MAX")`，当前 macOS sandbox 对该查询返回 `PermissionError: Operation not permitted`，导致并发 claim 测试尚未启动 worker 就失败；这不是 filelock 或业务并发失败。
+**Do instead:** 需要真实跨进程竞争时，用两个 `subprocess.Popen` 启动独立 Python interpreter，让它们等待同一个临时文件 barrier 后同时调用 domain command；显式传入 `GIT_CONFIG_GLOBAL=/dev/null`、`GIT_CONFIG_SYSTEM=/dev/null` 与 repo `PYTHONPATH`，再分别收集结构化 stdout/exit code。
+**Keywords:** python, ProcessPoolExecutor, semaphore, sandbox, subprocess, concurrency, barrier

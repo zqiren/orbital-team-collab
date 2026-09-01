@@ -260,6 +260,87 @@ class ProjectStore(JsonStore):
                     {"item_id": item_id},
                 )
 
+    def write_locked(self, value: dict[str, Any]) -> dict[str, Any]:
+        """Validate and replace a value while the caller holds the project lock."""
+        self._validate_value(value)
+        atomic_write_json(self.path, value)
+        return value
+
+
+class ImmutableProjectObjectStore:
+    """Schema-valid immutable objects written under a caller-held project lock."""
+
+    def __init__(
+        self,
+        runtime_root: Path,
+        project_slug: str,
+        directory: str,
+        schema_name: str,
+    ) -> None:
+        if Path(directory).name != directory:
+            raise TeamRuntimeError(
+                "E_GUARDRAIL_VIOLATION",
+                "Project object directory must not contain a path.",
+                {"directory": directory},
+            )
+        self.root = runtime_root / "projects" / project_slug / directory
+        self.project_slug = project_slug
+        self.schema_name = schema_name
+        secure_directory(self.root)
+
+    def _path(self, object_id: str) -> Path:
+        if not object_id or Path(object_id).name != object_id:
+            raise TeamRuntimeError(
+                "E_GUARDRAIL_VIOLATION",
+                "Project object ID must not contain a path.",
+                {"object_id": object_id},
+            )
+        return self.root / f"{object_id}.json"
+
+    def read(self, object_id: str) -> dict[str, Any]:
+        value = read_json(self._path(object_id))
+        validate(self.schema_name, value)
+        if (
+            value.get("id") != object_id
+            or value.get("project_slug") != self.project_slug
+        ):
+            raise TeamRuntimeError(
+                "E_CORRUPT_RUNTIME",
+                "Immutable project object has inconsistent identity.",
+                {"object_id": object_id},
+            )
+        return value
+
+    def list(self) -> list[dict[str, Any]]:
+        values = [self.read(path.stem) for path in sorted(self.root.glob("*.json"))]
+        return values
+
+    def create_locked(self, value: dict[str, Any]) -> dict[str, Any]:
+        validate(self.schema_name, value)
+        object_id = value.get("id")
+        if not isinstance(object_id, str):
+            raise TeamRuntimeError(
+                "E_CORRUPT_RUNTIME", "Immutable project object is missing its ID."
+            )
+        if value.get("project_slug") != self.project_slug:
+            raise TeamRuntimeError(
+                "E_CORRUPT_RUNTIME",
+                "Immutable project object belongs to a different project.",
+                {"object_id": object_id},
+            )
+        path = self._path(object_id)
+        if path.exists():
+            existing = self.read(object_id)
+            if canonical_json(existing) == canonical_json(value):
+                return existing
+            raise TeamRuntimeError(
+                "E_IDEMPOTENCY_CONFLICT",
+                "Immutable project object ID already has a different payload.",
+                {"object_id": object_id},
+            )
+        atomic_write_json(path, value)
+        return value
+
 
 class EventLog:
     def __init__(self, runtime_root: Path) -> None:

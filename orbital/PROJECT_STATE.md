@@ -2,7 +2,7 @@
 # PROJECT_STATE
 
 ## 当前阶段
-Team Workspace 的 SPEC-01 File Runtime Kernel 实现与 24/24 验证已完成，但 checkpoint 因当前沙箱拒绝写 `.git/index.lock` 而标记 Blocked；SPEC-02 与 SPEC-06 暂不解锁。
+Team Workspace 的 SPEC-02 `/team` Command & Member Workflow 已实现、完成 handoff 并通过全量 50/50 验证，但唯一一次 checkpoint 被 `.git/index.lock: Operation not permitted` 拒绝，当前为 Blocked（仅 commit 权限）；SPEC-06 保持 Ready。
 
 ## 已完成（2026-09-01）
 - orbital/instructions/project_goals.md — 项目目标
@@ -20,6 +20,7 @@ Team Workspace 的 SPEC-01 File Runtime Kernel 实现与 24/24 验证已完成�
 - src/orbital_team/、pyproject.toml — Python 3.11+ 单 package runtime/storage 与 `teamctl init/status/reset`
 - tests/test_runtime_kernel.py — 24 项 Git common-dir、并发、崩溃恢复、幂等、reset、路径 guard 与权限测试
 - demo/seed/、docs/31-file-runtime-kernel.md — 版本化 Apollo 初始化输入与 SPEC-01 安装/运行说明
+- src/orbital_team/member_workflow.py、tests/test_member_workflow.py、docs/32-member-workflow.md — worktree identity、Task resolve/原子 claim、bounded Context Pack、成员状态机、Git-bound Report 与 26 项专项测试
 - orbital-src/ — Orbital 官方 main 源码快照（git clone 被沙箱挡，改 tarball，见 LESSONS）
 
 ## 核心结论（已锚定）
@@ -34,13 +35,15 @@ Team Workspace 的 SPEC-01 File Runtime Kernel 实现与 24/24 验证已完成�
 - 工作系统包含 Confirmed Tasks、Potential Tasks、Open Questions；IM v1 只留 provider stub/fixture，Potential Task 经 triage 后才能成为可领取任务
 
 ## 下一步
-1. 在具备 `.git` 写权限的 session 将 SPEC-01/Spec Index 切回 Done、SPEC-02/SPEC-06 切为 Ready，并用 `feat: implement file runtime kernel (SPEC-01)` 创建包含现有工作树的单一 checkpoint
-2. checkpoint 后下一 session 优先执行 SPEC-02，实现 `/team claim/start/report`、成员与 Confirmed Task 状态机；SPEC-06 也可独立启动
-3. 用户已确认采用单 repo、自包含文件协议和事件驱动 Manager 的 demo 方向；每个 spec 完成后由 agent 本地 checkpoint commit，发送给 Kimi/其他外部对象仍需单独授权
-4. SPEC-00 checkpoint 为 `902a870`；SPEC-01 已完成 24/24 测试，但当前 session 的 `git add` 被 `.git/index.lock: Operation not permitted` 阻塞；git 命令仍须加 `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null`（见 LESSONS）
-5. Push 由用户在本机终端执行 `cd /Users/keanezhou/Desktop/Agent-collaboration && git push -u origin main`（2026-09-01 用户决定暂缓：拒绝提供 PAT，沙箱无 gh/ssh/keychain 凭据）；后续 spec 完成同样先本地 commit，push 一并交给用户
+1. 具备 `.git` 写权限的主 session 先复跑全量 50 项，将 SPEC-02/Spec Index 切为 Done、SPEC-03/SPEC-04 切为 Ready，再创建 `feat: implement /team member workflow (SPEC-02)` 单一 checkpoint；不要改动已完成实现与 handoff 内容
+2. checkpoint 后关键路径可执行 SPEC-04（`teamd`、Integration Job、ManagerRunner 与受控 merge）；SPEC-03（Member Skill/adapter）和 SPEC-06（IM fixture）也可独立启动
+3. SPEC-03 必须复用 `MemberWorkflow`/`teamctl` 并由 current worktree join binding 推导 actor，不复制状态机或接受可冒充的 member payload；SPEC-04 从 `report.submitted` 和 immutable Report 冷启动
+4. 用户已确认采用单 repo、自包含文件协议和事件驱动 Manager 的 demo 方向；每个 spec 完成后由主 session 复测并本地 checkpoint commit，发送给 Kimi/其他外部对象仍需单独授权
+5. SPEC-00 checkpoint 为 `902a870`，SPEC-01 checkpoint 为 `06691b4`；git 命令仍须加 `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null`（见 LESSONS）
+6. Push 由用户在本机终端执行 `cd /Users/keanezhou/Desktop/Agent-collaboration && git push -u origin main`（2026-09-01 用户决定暂缓：拒绝提供 PAT，沙箱无 gh/ssh/keychain 凭据）；后续 spec 完成同样先本地 commit，push 一并交给用户
   <!--mem id:380ae9 created:2026-09-01 touched:2026-09-01-->
 
 ## 阻塞
-- SPEC-01 唯一硬阻塞是当前沙箱对 `.git` 只读：`git add` 无法创建 `.git/index.lock`，因此尚无 checkpoint hash；全部实现与验证结果安全保留在未提交工作树。
-- SPEC-00 checkpoint（`902a870`）仍未 push 到 origin/main；沙箱内无 HTTPS 凭据，由用户在自己终端决定 push 节奏。
+- SPEC-02 唯一 blocker 是当前 sandbox 无法创建 `.git/index.lock`；实现、handoff 与 50/50 验证均已完成并保留在工作树，主 session 只需复测、切换状态并 commit。
+- SPEC-03 与 SPEC-04 的代码依赖已满足，但在 SPEC-02 checkpoint 前不正式解锁；SPEC-06 仍可独立执行。
+- 已完成的 checkpoint 均未 push 到 origin/main；沙箱内无 HTTPS 凭据，由用户在自己终端决定 push 节奏。
