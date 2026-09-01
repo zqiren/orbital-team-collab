@@ -4,9 +4,11 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 from typing import Sequence, TextIO
 
 from .errors import TeamRuntimeError
+from .im_context import DEFAULT_FIXTURE, FixtureIMProvider, IMContextWorkflow
 from .knowledge_workflow import KnowledgeWorkflow
 from .manager_integration import ManagerIntegrationWorkflow
 from .member_workflow import DEFAULT_CONTEXT_BUDGET, MemberWorkflow
@@ -95,11 +97,80 @@ def _parser() -> argparse.ArgumentParser:
     submit.add_argument("--request-id")
     submit.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
 
-    question = commands.add_parser("question", help="inspect Open Questions")
+    context = commands.add_parser("context", help="ingest bounded IM context")
+    context_commands = context.add_subparsers(dest="context_command", required=True)
+    ingest = context_commands.add_parser("ingest", help="extract fixture candidates")
+    ingest.add_argument("--provider", choices=["fixture"], required=True)
+    ingest.add_argument("--project")
+    ingest.add_argument("--fixture")
+    ingest.add_argument("--request-id")
+    ingest.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+
+    potential = commands.add_parser("potential", help="triage Potential Tasks")
+    potential_commands = potential.add_subparsers(dest="potential_command", required=True)
+    potential_list = potential_commands.add_parser("list", help="list Potential Tasks")
+    potential_list.add_argument("--project")
+    potential_list.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    triage = potential_commands.add_parser("triage", help="triage a Potential Task")
+    triage.add_argument("potential_id")
+    triage.add_argument("--note", required=True)
+    triage.add_argument("--request-id")
+    triage.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    promote = potential_commands.add_parser("promote", help="promote to a Draft Task")
+    promote.add_argument("potential_id")
+    promote.add_argument("--request-id")
+    promote.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    dismiss = potential_commands.add_parser("dismiss", help="dismiss a Potential Task")
+    dismiss.add_argument("potential_id")
+    dismiss.add_argument("--reason", required=True)
+    dismiss.add_argument("--request-id")
+    dismiss.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    duplicate = potential_commands.add_parser("duplicate", help="mark a duplicate")
+    duplicate.add_argument("potential_id")
+    duplicate.add_argument("--of", dest="duplicate_of", required=True)
+    duplicate.add_argument("--request-id")
+    duplicate.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    potential_question = potential_commands.add_parser("question", help="convert to Open Question")
+    potential_question.add_argument("potential_id")
+    potential_question.add_argument("--owner", required=True)
+    potential_question.add_argument("--question", required=True)
+    potential_question.add_argument("--request-id")
+    potential_question.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+
+    question = commands.add_parser("question", help="manage Open Questions")
     question_commands = question.add_subparsers(dest="question_command", required=True)
     question_list = question_commands.add_parser("list", help="list project questions")
     question_list.add_argument("--project", required=True)
     question_list.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    question_add = question_commands.add_parser("add", help="add an Open Question")
+    question_add.add_argument("--project", required=True)
+    question_add.add_argument("--question", required=True)
+    question_add.add_argument("--owner", required=True)
+    question_add.add_argument("--blocking", action="store_true")
+    question_add.add_argument("--task", action="append", default=[])
+    question_add.add_argument("--request-id")
+    question_add.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    question_answer = question_commands.add_parser("answer", help="answer an Open Question")
+    question_answer.add_argument("question_id")
+    question_answer.add_argument("--answer", required=True)
+    question_answer.add_argument("--request-id")
+    question_answer.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    question_defer = question_commands.add_parser("defer", help="defer an Open Question")
+    question_defer.add_argument("question_id")
+    question_defer.add_argument("--reason", required=True)
+    question_defer.add_argument("--until")
+    question_defer.add_argument("--request-id")
+    question_defer.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    question_reopen = question_commands.add_parser("reopen", help="reopen a deferred question")
+    question_reopen.add_argument("question_id")
+    question_reopen.add_argument("--reason", required=True)
+    question_reopen.add_argument("--request-id")
+    question_reopen.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    question_close = question_commands.add_parser("close", help="close an answered/deferred question")
+    question_close.add_argument("question_id")
+    question_close.add_argument("--reason", required=True)
+    question_close.add_argument("--request-id")
+    question_close.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
 
     manager = commands.add_parser("manager", help="manager integration commands")
     manager_commands = manager.add_subparsers(dest="manager_command", required=True)
@@ -290,10 +361,49 @@ def main(argv: Sequence[str] | None = None) -> int:
                 commit=arguments.commit,
                 request_id=arguments.request_id,
             )
-        elif arguments.command == "question" and arguments.question_command == "list":
-            result = MemberWorkflow(arguments.workspace).list_questions(
-                arguments.project
+        elif arguments.command == "context" and arguments.context_command == "ingest":
+            workflow = IMContextWorkflow(arguments.workspace)
+            fixture = Path(arguments.fixture) if arguments.fixture else Path(arguments.workspace) / DEFAULT_FIXTURE
+            result = workflow.ingest(
+                arguments.project,
+                FixtureIMProvider(fixture),
+                request_id=arguments.request_id,
             )
+        elif arguments.command == "potential":
+            workflow = IMContextWorkflow(arguments.workspace)
+            if arguments.potential_command == "list":
+                result = workflow.list_potential(arguments.project)
+            elif arguments.potential_command == "triage":
+                result = workflow.triage(arguments.potential_id, arguments.note, request_id=arguments.request_id)
+            elif arguments.potential_command == "promote":
+                result = workflow.promote(arguments.potential_id, request_id=arguments.request_id)
+            elif arguments.potential_command == "dismiss":
+                result = workflow.dismiss(arguments.potential_id, arguments.reason, request_id=arguments.request_id)
+            elif arguments.potential_command == "duplicate":
+                result = workflow.duplicate(arguments.potential_id, arguments.duplicate_of, request_id=arguments.request_id)
+            elif arguments.potential_command == "question":
+                result = workflow.convert_to_question(arguments.potential_id, arguments.owner, arguments.question, request_id=arguments.request_id)
+            else:  # pragma: no cover
+                parser.error("unknown potential command")
+                return 2
+        elif arguments.command == "question":
+            if arguments.question_command == "list":
+                result = MemberWorkflow(arguments.workspace).list_questions(arguments.project)
+            else:
+                workflow = IMContextWorkflow(arguments.workspace)
+                if arguments.question_command == "add":
+                    result = workflow.add_question(arguments.project, arguments.question, arguments.owner, blocking=arguments.blocking, task_ids=arguments.task, request_id=arguments.request_id)
+                elif arguments.question_command == "answer":
+                    result = workflow.transition_question(arguments.question_id, "answer", text=arguments.answer, request_id=arguments.request_id)
+                elif arguments.question_command == "defer":
+                    result = workflow.transition_question(arguments.question_id, "defer", text=arguments.reason, deferred_until=arguments.until, request_id=arguments.request_id)
+                elif arguments.question_command == "reopen":
+                    result = workflow.transition_question(arguments.question_id, "reopen", text=arguments.reason, request_id=arguments.request_id)
+                elif arguments.question_command == "close":
+                    result = workflow.transition_question(arguments.question_id, "close", text=arguments.reason, request_id=arguments.request_id)
+                else:  # pragma: no cover
+                    parser.error("unknown question command")
+                    return 2
         elif arguments.command == "manager":
             integration = ManagerIntegrationWorkflow(arguments.workspace)
             if arguments.manager_command == "inbox":

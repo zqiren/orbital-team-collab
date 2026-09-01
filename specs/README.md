@@ -32,8 +32,8 @@
 | [SPEC-03](SPEC-03-member-skill-and-agent-adapters.md) | Member Skill & Agent Adapters | Agent UX | Done | SPEC-02 | SPEC-08 |
 | [SPEC-04](SPEC-04-event-driven-manager-integration.md) | Event-driven Manager Integration | Manager | Done | SPEC-02 | SPEC-05, SPEC-07 |
 | [SPEC-05](SPEC-05-manager-knowledge-compilation.md) | Manager Knowledge Compilation | Manager | Done | SPEC-04 | SPEC-08 |
-| [SPEC-06](SPEC-06-im-context-and-potential-task-stub.md) | IM Context & Potential Task Stub | Discovery | Ready | SPEC-01 | SPEC-07, SPEC-08 |
-| [SPEC-07](SPEC-07-team-dashboard.md) | Tasks / Potential Tasks / Open Questions Dashboard | UI | Planned | SPEC-04, SPEC-06 | SPEC-08 |
+| [SPEC-06](SPEC-06-im-context-and-potential-task-stub.md) | IM Context & Potential Task Stub | Discovery | Done | SPEC-01 | SPEC-07, SPEC-08 |
+| [SPEC-07](SPEC-07-team-dashboard.md) | Tasks / Potential Tasks / Open Questions Dashboard | UI | Ready | SPEC-04, SPEC-06 | SPEC-08 |
 | [SPEC-08](SPEC-08-demo-fixture-and-orchestration.md) | Demo Fixture & Multi-agent Orchestration | Demo | Planned | SPEC-03, SPEC-05, SPEC-06, SPEC-07 | SPEC-09 |
 | [SPEC-09](SPEC-09-e2e-hardening-and-delivery.md) | End-to-end Hardening & Delivery | Delivery | Planned | SPEC-08 | — |
 

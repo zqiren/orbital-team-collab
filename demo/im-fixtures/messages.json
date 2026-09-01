@@ -1,0 +1,32 @@
+{
+  "conversations": [
+    {
+      "display_name": "Synthetic delivery planning",
+      "id": "fixture-planning",
+      "messages": [
+        {
+          "access_scope": "fixture",
+          "conversation_id": "fixture-planning",
+          "message_id": "fixture-message-001",
+          "permalink": null,
+          "provider": "fixture",
+          "sender": "synthetic-product-lead",
+          "text": "TASK: Add retry metrics\nSUMMARY: Track retry attempts with a stable aggregation dimension.\nQUESTION: Should retries be grouped by provider or by task?\nBLOCKING: true\nOWNER: human:default-manager",
+          "timestamp": "2026-09-01T08:15:00Z"
+        },
+        {
+          "access_scope": "fixture",
+          "conversation_id": "fixture-planning",
+          "message_id": "fixture-message-002",
+          "permalink": null,
+          "provider": "fixture",
+          "sender": "synthetic-engineer",
+          "text": "This synthetic note is context only and intentionally produces no candidate.",
+          "timestamp": "2026-09-01T08:16:00Z"
+        }
+      ]
+    }
+  ],
+  "kind": "orbital-team-im-fixture",
+  "version": 1
+}
