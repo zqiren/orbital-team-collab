@@ -2,51 +2,20 @@
 # PROJECT_STATE
 
 ## 当前阶段
-SPEC-07 Team Dashboard 已完成待主 session checkpoint：Python IPv4 loopback host、共享 runtime projection、active-Human actor-bound command adapter、静态 HTML/CSS/ES module UI、2 秒轮询与安全 local Run/Knowledge preview 已交付；SPEC-07 专项 9/9、全量 `python3 -m pytest -q` 100/100 通过。SPEC-03/05/06/07 依赖均 Done，SPEC-08 已转 Ready。主 session 侧 spec 派发/复测/checkpoint 循环已沉淀为 skills/spec-pipeline/SKILL.md。
+SPEC-08 Demo Fixture & Multi-agent Orchestration 已完成并 checkpoint（806958a）：Apollo synthetic fixture 在精确 marker 保护的临时根创建 canonical repo + Alice/Bob linked worktree + 共享 runtime；双成员进程并行 claim/report，builtin Manager 串行完成 code merge、独立 knowledge commit、`integration.completed` 与 Dashboard projection；doctor/reset/replay 齐备，专项 7/7、全量 107/107 通过。SPEC-09（交付收敛，最后一个 spec）已派发 codex。
 
-## 已完成（2026-09-01）
-- orbital/instructions/project_goals.md — 项目目标
-- docs/00-assignment-brief.md — 作业理解、成功标准、repo 规划草案
-- docs/01-orbital-current-state.md — Orbital 现状盘点（README 抓取 + 一手体感）
-- docs/01b-orbital-source-notes.md — 源码级盘点（main tarball：单人假设逐层坐实 + 旗舰功能代码触点映射）
-- docs/research/claude-code.md、codex.md、adjacent.md — fanout 三 worker 联网核实（全部 2026-09-01，含来源 URL）
-- docs/02-competitive-landscape.md — 「雷同」反驳 + 团队维度对比表 + 四条全行业空白
-- docs/10-user-scenarios.md — 画像 A/B/C + 场景 S1–S6 + 优先级
-- docs/11-team-feature-directions.md — 方向池 F1–F7 + 优先级矩阵 + 旗舰组合
-- specs/README.md、specs/EXECUTION_PROTOCOL.md — 十阶段依赖图、统一执行与 handoff 协议
-- specs/SPEC-00～SPEC-09 — 从产品契约、文件 runtime、成员/Manager 工作流、IM stub、看板到 E2E 交付的独立 session specs
-- docs/20-prd.md、docs/21-architecture.md、docs/22-protocol.md、docs/30-roadmap.md — 已冻结的 Team Workspace PRD、架构、协议与路线图
-- schemas/v1/orbital-team.schema.json — Protocol 1.0 规范 schema bundle（48 个 `$defs`）
-- src/orbital_team/、pyproject.toml — Python 3.11+ 单 package runtime/storage 与 `teamctl init/status/reset`
-- tests/test_runtime_kernel.py — 24 项 Git common-dir、并发、崩溃恢复、幂等、reset、路径 guard 与权限测试
-- demo/seed/、docs/31-file-runtime-kernel.md — 版本化 Apollo 初始化输入与 SPEC-01 安装/运行说明
-- src/orbital_team/member_workflow.py、tests/test_member_workflow.py、docs/32-member-workflow.md — worktree identity、Task resolve/原子 claim、bounded Context Pack、成员状态机、Git-bound Report 与 26 项专项测试
-- src/orbital_team/manager_integration.py、manager_runner.py、manager_proc.py、teamd.py、tests/test_manager_integration.py、docs/33-event-driven-manager-integration.md — report event 自动调度、Integration Job/Manager Run、受控 Git merge、失败/崩溃恢复、私有日志与 12 项专项测试
-- src/orbital_team/knowledge_workflow.py、skills/orbital-team-manager/、tests/test_knowledge_workflow.py、docs/34-manager-knowledge-compilation.md — durable knowledge 分类、Proposal 校验、受控独立 commit/no-change、dirty/stale/block/resume、幂等恢复与 8 项专项测试
-- src/orbital_team/member_adapter.py、skills/orbital-team-member/、tests/test_member_adapters.py — worktree-bound `/team` adapter、Claude SessionStart/member Run、agent-neutral install/fallback 与 11 项专项测试
-- src/orbital_team/im_context.py、demo/im-fixtures/、tests/test_im_context.py、docs/35-im-context-and-potential-task-stub.md — 离线 IM provider/ContextItem fixture、evidence extraction、Potential Task/Open Question triage 与 10 项专项测试
-- src/orbital_team/dashboard.py、dashboard_static/、tests/test_dashboard.py、docs/36-team-dashboard.md — shared runtime projection、actor-bound Human routes、无构建链 UI、敏感日志 guard 与 9 项专项测试
-- orbital-src/ — Orbital 官方 main 源码快照（git clone 被沙箱挡，改 tarball，见 LESSONS）
-
-## 核心结论（已锚定）
-- Orbital = 1 人 × N agents；竞品「团队功能」= 卖给 IT 的治理；全行业空白 = git 化项目状态 × 异构编排 × 团队治理的组合，窗口 6–12 个月
-- 源码层佐证：queue Source 枚举仅 USER/UPLOAD、进程内锁、账本无主体维度、api 无用户级 auth——单人假设从产品到代码一致
-- 旗舰组合：Git-native Team Workspace = F1 Shared Project State + F2 Approval Routing + F3 Team Budget；F5 做 demo 载体；代码触点已映射（docs/01b 第 3 节）
-- demo 方向已收敛为自包含的 file-native Team Workspace：不依赖 Orbital 安装/API；Manager/Member 是 agent-neutral 角色；成员用 `/team claim` 原子认领并上报，文件事件自动启动短生命周期 Manager Run 完成代码与知识合并
-- 产品采用两层文件模型：Git 版本化 durable knowledge/config/code/demo seed；tasks/events/reports/jobs/run logs 持久化在本地 runtime、由 Team Dashboard 读取但不提交，未来 Team Cloud 负责跨机器同步
-- SPEC-00 的 8 个 design review questions 已全部收敛：入口 `/team`；其余采用 DECISIONS D11 的默认契约
-- 实现边界已冻结为 Python 3.11 单一 domain/storage package + JSON Schema/filelock + 无 Node/DB 的 loopback Dashboard；代码 merge 用 `integration.merged`，knowledge commit 后才 `integration.completed`
-- durable knowledge apply 生成独立本地 Git commit（no-change 不造空 commit）；所有 merge/commit 经 git mutation lock 与受控 domain command，绝不 remote push
-- 工作系统包含 Confirmed Tasks、Potential Tasks、Open Questions；IM v1 只留 provider stub/fixture，Potential Task 经 triage 后才能成为可领取任务
+## 本轮完成（2026-09-01）
+- `src/orbital_team/demo_orchestration.py` 与 `demo/scripts/team_demo.py` 提供 doctor/setup/start/status/reset/replay；reset 先复用 D14 runtime marker，再验证绑定精确临时根的私有 demo marker。
+- `demo/seed/` 现含两个 Ready Tasks 并默认选择离线 builtin runner；`demo/sample-app/`、`demo/im-fixtures/demo-messages.json` 与 `demo/replay/dashboard.json` 都是无真实身份、凭证、网络或绝对路径的 synthetic fixture。
+- builtin Manager 扩展到 integration/knowledge 两个 phase；代码仍只经受控 merge，knowledge 仍只经受控 Proposal 与 SPEC-05 apply/独立 commit。
+- `tests/test_demo_orchestration.py` 覆盖 fixture/schema、doctor/missing runner、共享 common-dir/Skill、双进程全闭环、exact-marker reset/连续两次、member crash、Manager retry 与 replay 标签。
+- 使用文档位于 `docs/37-demo-fixture-and-orchestration.md`；较旧完成项与产品结论保存在 `orbital/PROJECT_STATE_ARCHIVE.md`。
 
 ## 下一步
-1. 剩余 spec 逐 spec 执行：下一项 SPEC-08（Ready），之后 SPEC-09；每个 spec 由主 session 复测后 checkpoint
-2. SPEC-08 使用已完成的 Member/Manager/IM/Dashboard primitives 组装可重置 demo fixture 与多 worktree orchestration，不复制状态机或引入真实 IM/provider 账号
-3. 每个 spec 完成后由主 session 复测并本地 checkpoint commit，发送给 Kimi/其他外部对象仍需单独授权
-4. checkpoint 历史：SPEC-00 `902a870`、SPEC-01 `06691b4`、SPEC-02 `83cbf6e`、SPEC-04 实现层 `6e30a89`/记忆层 `fae75d7`、SPEC-05 实现层 `ed5c52e`/记忆层 `4e50161`、SPEC-03 `cbe716a`、SPEC-06 `97be555`；SPEC-07 按本 session 硬约束保持未提交，待主 session 复测 checkpoint；git 只读命令仍须加 `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null`（见 LESSONS）
-5. Push 由用户在本机终端执行 `cd /Users/keanezhou/Desktop/Agent-collaboration && git push -u origin main`（2026-09-01 用户决定暂缓：拒绝提供 PAT，沙箱无 gh/ssh/keychain 凭据）；后续 spec 完成同样先本地 commit，push 一并交给用户
-  <!--mem id:380ae9 created:2026-09-01 touched:2026-09-01-->
+1. SPEC-09（最后一个 spec）已派发 codex：clean-clone 验证、README 电梯陈述、文档收敛与最终 repo 整理；主 session 复测后做最终 checkpoint
+2. SPEC-09 在普通本机补真实 loopback Dashboard/browser smoke，并在可用 provider 环境补至少一次真实外部 Manager/Member agent rehearsal；不得把 deterministic builtin 或 replay 冒充外部 agent。
+3. Git checkpoint 链（本地 main）：SPEC-00 `902a870`、SPEC-01 `06691b4`、SPEC-02 `83cbf6e`、SPEC-04 `6e30a89`/`fae75d7`、SPEC-05 `ed5c52e`/`4e50161`、SPEC-03 `cbe716a`、SPEC-06 `97be555`、SPEC-07 `1798346`/`6b98ea1`、SPEC-08 `806958a`；push 由用户本机终端执行。
 
-## 阻塞
-- SPEC-07 无实现 blocker；当前 sandbox 禁止 loopback listen socket，因此 routes 使用同一 BaseHTTPRequestHandler 的内存 HTTP transport 验证，真实 `teamctl dashboard` socket/browser smoke 留普通本机复测。
-- 已完成的 checkpoint（`902a870`、`06691b4`、`83cbf6e`）均未 push 到 origin/main；沙箱内无 HTTPS 凭据，由用户在自己终端决定 push 节奏。
+## Blockers / limitations
+- 当前 sandbox 禁止 IPv4 loopback `socket.bind`，所以本轮验证 Dashboard projection 与启动命令，未伪造 live socket/browser 成功。
+- 当前 sandbox 不具备可验证的真实 Claude/Codex nested agent rehearsal；builtin 是真实 subprocess/受控 domain 流程的稳定离线 runner，但不是外部 LLM agent。外部 smoke 留 SPEC-09 普通 provider 环境完成。
