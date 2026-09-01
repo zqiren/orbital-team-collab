@@ -24,6 +24,8 @@
 
 ## Runtime 实现
 - pyproject.toml — Python 3.11+ package、`teamctl` console entry 与 jsonschema/filelock 依赖声明
+- pytest.ini — 钉住 pytest rootdir/testpaths，避免收集越出工作区触发沙箱 EPERM
+- conftest.py — pytest 沙箱安全收集 shim（EPERM 时按无 conftest 处理），正常环境 no-op
 - src/orbital_team/ — common-dir resolver、schema/models、atomic storage、events/idempotency、runtime lifecycle 与 CLI
 - src/orbital_team/member_workflow.py — current-worktree Member identity、Task resolve/state machine、原子 claim、Context Pack 与 Git-bound Report domain service
 - tests/test_runtime_kernel.py — SPEC-01 的临时 Git repo/worktree、并发、损坏恢复、reset 与权限验证

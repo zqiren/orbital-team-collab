@@ -30,3 +30,8 @@
 **What happened:** Python 3.13 的 `ProcessPoolExecutor` 初始化会调用 `os.sysconf("SC_SEM_NSEMS_MAX")`，当前 macOS sandbox 对该查询返回 `PermissionError: Operation not permitted`，导致并发 claim 测试尚未启动 worker 就失败；这不是 filelock 或业务并发失败。
 **Do instead:** 需要真实跨进程竞争时，用两个 `subprocess.Popen` 启动独立 Python interpreter，让它们等待同一个临时文件 barrier 后同时调用 domain command；显式传入 `GIT_CONFIG_GLOBAL=/dev/null`、`GIT_CONFIG_SYSTEM=/dev/null` 与 repo `PYTHONPATH`，再分别收集结构化 stdout/exit code。
 **Keywords:** python, ProcessPoolExecutor, semaphore, sandbox, subprocess, concurrency, barrier
+
+### 2026-09-01 — pytest-rootpath-parent-eperm
+**What happened:** 沙箱内任何 pytest 运行（含显式 `pytest tests/`）收集阶段即报 `PermissionError: ... '/Users/keanezhou/Desktop'`。真实根因：pytest 8.3 收集 rootpath（=仓库根）的 Dir 节点时，`Session._collect_path` → `gethookproxy(rootpath.parent)` → `PytestPluginManager._getconftestmodules(Desktop)` → `_get_directory` 对 Desktop 调 `is_file()` stat，被沙箱拒绝；与 rootdir 探测无关，仅在仓库根放 pytest.ini 无效。
+**Do instead:** 仓库根 `conftest.py` monkeypatch `PytestPluginManager._getconftestmodules`：捕获 `PermissionError` 返回空 conftest 列表（正常机器不会触发该分支）；根目录 `pytest.ini` 设 `testpaths = tests` 钉住收集范围、`pythonpath = src` 让 src 布局免安装可导入。统一用 `python3 -m pytest -q` 跑全量。
+**Keywords:** pytest, rootpath, gethookproxy, conftest, sandbox, EPERM, collection

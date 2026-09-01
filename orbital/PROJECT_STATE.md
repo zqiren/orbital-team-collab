@@ -2,7 +2,7 @@
 # PROJECT_STATE
 
 ## 当前阶段
-Team Workspace 的 SPEC-02 `/team` Command & Member Workflow 已实现、完成 handoff、主 session 复测全量 50/50 通过并 checkpoint（`83cbf6e`）；SPEC-03/SPEC-04/SPEC-06 均 Ready。用户指示本轮推进到 SPEC-02 为止。
+用户指示（2026-09-01）把剩余 spec（SPEC-03～09，含 demo）由 claude-code 派发子 agent 跑完，主 session 逐 spec 复测 + checkpoint commit。pytest 环境修复：根目录 pytest.ini（testpaths/pythonpath=src）+ conftest.py EPERM shim，基线全量绿；SPEC-04（关键路径）由 claude-code 编排执行中。
 
 ## 已完成（2026-09-01）
 - orbital/instructions/project_goals.md — 项目目标
@@ -35,7 +35,7 @@ Team Workspace 的 SPEC-02 `/team` Command & Member Workflow 已实现、完成 
 - 工作系统包含 Confirmed Tasks、Potential Tasks、Open Questions；IM v1 只留 provider stub/fixture，Potential Task 经 triage 后才能成为可领取任务
 
 ## 下一步
-1. 用户指示本轮推进到 SPEC-02 为止；下轮继续时按 EXECUTION_PROTOCOL 冷启动派发下一个 spec（关键路径 SPEC-04：teamd、Integration Job、ManagerRunner 与受控 merge；SPEC-03 Member Skill/adapter 与 SPEC-06 IM fixture 也可独立启动）
+1. 剩余 spec 由 claude-code 编排执行，顺序 SPEC-04 → 05 → 03 → 06 → 07 → 08 → 09（每 spec 单独派发，主 session 验证后 checkpoint）；SPEC-04（teamd、Integration Job、ManagerRunner、受控 merge）已派发
 2. SPEC-03 必须复用 `MemberWorkflow`/`teamctl` 并由 current worktree join binding 推导 actor，不复制状态机或接受可冒充的 member payload；SPEC-04 从 `report.submitted` 和 immutable Report 冷启动
 3. 每个 spec 完成后由主 session 复测并本地 checkpoint commit，发送给 Kimi/其他外部对象仍需单独授权
 4. checkpoint 历史：SPEC-00 `902a870`、SPEC-01 `06691b4`、SPEC-02 `83cbf6e`；子 agent 沙箱可能无法写 `.git/index.lock`，实现后由主 session 复测并 commit；git 命令仍须加 `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null`（见 LESSONS）
@@ -43,5 +43,5 @@ Team Workspace 的 SPEC-02 `/team` Command & Member Workflow 已实现、完成 
   <!--mem id:380ae9 created:2026-09-01 touched:2026-09-01-->
 
 ## 阻塞
-- 无实现阻塞；SPEC-03/SPEC-04/SPEC-06 均 Ready，等待下一轮派发。
+- 无实现阻塞；SPEC-04 执行中（claude-code 编排），其余按派发顺序排队。
 - 已完成的 checkpoint（`902a870`、`06691b4`、`83cbf6e`）均未 push 到 origin/main；沙箱内无 HTTPS 凭据，由用户在自己终端决定 push 节奏。
