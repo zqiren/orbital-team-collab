@@ -19,6 +19,7 @@ from typing import Any, Callable, Mapping
 
 from .constants import SCHEMA_VERSION
 from .errors import TeamRuntimeError
+from .knowledge_workflow import KnowledgeWorkflow
 from .manager_integration import (
     DEFAULT_MAX_ATTEMPTS,
     ManagerIntegrationWorkflow,
@@ -50,6 +51,7 @@ class TeamDaemon:
         validation_argv: list[str] | None = None,
     ) -> None:
         self.workflow = ManagerIntegrationWorkflow(workspace)
+        self.knowledge = KnowledgeWorkflow(workspace)
         self.supervisor = RunnerSupervisor(self.workflow)
         self.runners = dict(runners or {})
         self.manifest_dirs = list(manifest_dirs or [])
@@ -90,11 +92,13 @@ class TeamDaemon:
     # ------------------------------------------------------------------
 
     def resolve_runner(
-        self, project: dict[str, Any]
+        self, project: dict[str, Any], *, phase: str = "integration"
     ) -> tuple[ManagerRunner, str] | None:
         name = project["runner"]
         if name in self.runners:
-            return self.runners[name], name
+            runner = self.runners[name]
+            phases = getattr(runner, "phases", frozenset({"integration"}))
+            return (runner, name) if phase in phases else None
         if name == "manual":
             return None
         search_dirs = [
@@ -104,7 +108,8 @@ class TeamDaemon:
         for directory in search_dirs:
             manifest = directory / f"{name}.json"
             if manifest.is_file():
-                return CommandManagerRunner.from_manifest(manifest), name
+                runner = CommandManagerRunner.from_manifest(manifest)
+                return (runner, name) if phase in runner.phases else None
         raise TeamRuntimeError(
             "E_RUNNER_UNAVAILABLE",
             "No runner implementation or manifest matches the project runner.",
@@ -318,6 +323,141 @@ class TeamDaemon:
                 self.workflow.prepare_knowledge_pack(job["id"])
                 summary["packs_prepared"] += 1
 
+    def _resume_knowledge_jobs(self, summary: dict[str, int]) -> None:
+        for observed in self.workflow.jobs.list():
+            if observed["state"] != "blocked" or observed["block_kind"] != "knowledge":
+                continue
+            try:
+                self.knowledge.resume_knowledge_job(observed["id"])
+            except TeamRuntimeError as exc:
+                if exc.code != "E_BLOCKING_QUESTION":
+                    raise
+            else:
+                summary["knowledge_resumed"] += 1
+
+    def _knowledge_attempts(self, slug: str, job_id: str) -> int:
+        runs_root = self.workflow.runtime_root / "projects" / slug / "runs"
+        attempts = 0
+        if not runs_root.is_dir():
+            return attempts
+        for request_path in runs_root.glob("*/request.json"):
+            try:
+                request = read_json(request_path)
+            except TeamRuntimeError:
+                continue
+            if request.get("job_id") == job_id and request.get("phase") == "knowledge":
+                attempts += 1
+        return attempts
+
+    def _block_exhausted_knowledge(
+        self, job_id: str, attempts: int, reason: str, summary: dict[str, int]
+    ) -> None:
+        job = self.workflow.jobs.read(job_id)
+        if job["state"] != "awaiting_knowledge":
+            return
+        self.knowledge.block_knowledge(
+            job_id,
+            reason,
+            question=(
+                f"Knowledge compilation for job {job_id} failed {attempts} times; "
+                "how should canonical memory proceed?"
+            ),
+            actor="system:teamd",
+        )
+        summary["knowledge_blocked"] += 1
+
+    def _execute_knowledge(
+        self,
+        slug: str,
+        job_id: str,
+        runner: ManagerRunner,
+        context: RunContext,
+        summary: dict[str, int],
+    ) -> None:
+        run_state = "succeeded"
+        failure: str | None = None
+        try:
+            runner.run(context.request, context.request_path)
+        except TeamRuntimeError as exc:
+            run_state = "timed_out" if exc.code == "E_RUNNER_TIMEOUT" else "failed"
+            failure = f"{exc.code}: {exc.message}"
+        except Exception as exc:  # runner adapters are an isolation boundary
+            run_state = "failed"
+            failure = f"runner exception: {exc!r}"
+        result = self.supervisor.load_result(context)
+        if result is None:
+            run_state = run_state if run_state != "succeeded" else "failed"
+            failure = failure or "Runner produced no schema-valid knowledge result file."
+        self.supervisor.finish_run(slug, context.run_id, run_state)
+        attempts = self._knowledge_attempts(slug, job_id)
+        if result is None:
+            summary["knowledge_invalid_results"] += 1
+            if attempts >= self.max_attempts:
+                self._block_exhausted_knowledge(
+                    job_id, attempts, failure or "invalid result", summary
+                )
+            return
+        try:
+            applied = self.knowledge.apply_runner_result(job_id, result)
+        except TeamRuntimeError as exc:
+            summary["knowledge_invalid_results"] += 1
+            job = self.workflow.jobs.read(job_id)
+            if job["state"] == "blocked" and job["block_kind"] == "knowledge":
+                summary["knowledge_blocked"] += 1
+            elif attempts >= self.max_attempts:
+                self._block_exhausted_knowledge(
+                    job_id, attempts, f"{exc.code}: {exc.message}", summary
+                )
+            return
+        job = applied.get("job") or self.workflow.jobs.read(job_id)
+        if job["state"] == "done":
+            summary["knowledge_applied"] += 1
+        elif job["state"] == "blocked":
+            summary["knowledge_blocked"] += 1
+        else:
+            summary["knowledge_stale"] += 1
+            if attempts >= self.max_attempts:
+                self._block_exhausted_knowledge(
+                    job_id, attempts, "Knowledge proposal remained stale.", summary
+                )
+
+    def _drive_knowledge_jobs(self, summary: dict[str, int]) -> None:
+        for observed in self.workflow.jobs.list():
+            if observed["state"] != "awaiting_knowledge":
+                continue
+            try:
+                with RuntimeLock(
+                    self.workflow.manager_lock(observed["project_slug"]), timeout=0
+                ):
+                    job = self.workflow.jobs.read(observed["id"])
+                    if job["state"] != "awaiting_knowledge":
+                        continue
+                    project = self.workflow._project(job["project_slug"])
+                    try:
+                        resolved = self.resolve_runner(project, phase="knowledge")
+                    except TeamRuntimeError:
+                        summary["runner_unavailable"] = (
+                            summary.get("runner_unavailable", 0) + 1
+                        )
+                        continue
+                    if resolved is None:
+                        continue
+                    runner, runner_name = resolved
+                    context = self.supervisor.prepare_knowledge_run(
+                        job,
+                        agent_type=getattr(runner, "agent_type", runner_name),
+                        timeout_seconds=self.runner_timeout,
+                    )
+                    self.knowledge.start_knowledge_run(job["id"], context.run_id)
+                    self.supervisor.mark_running(job["project_slug"], context.run_id)
+                    summary["knowledge_started"] += 1
+                    self._execute_knowledge(
+                        job["project_slug"], job["id"], runner, context, summary
+                    )
+            except TeamRuntimeError as exc:
+                if exc.code != "E_LOCK_TIMEOUT":
+                    raise
+
     # ------------------------------------------------------------------
     # public loop
     # ------------------------------------------------------------------
@@ -328,6 +468,12 @@ class TeamDaemon:
             "invalid_results": 0,
             "jobs_created": 0,
             "jobs_started": 0,
+            "knowledge_applied": 0,
+            "knowledge_blocked": 0,
+            "knowledge_invalid_results": 0,
+            "knowledge_resumed": 0,
+            "knowledge_stale": 0,
+            "knowledge_started": 0,
             "packs_prepared": 0,
             "reconciled": 0,
             "recovered": 0,
@@ -343,6 +489,8 @@ class TeamDaemon:
         self._admit_jobs(summary, tail_report_ids)
         self._drive_queued_jobs(summary)
         self._prepare_packs(summary)
+        self._resume_knowledge_jobs(summary)
+        self._drive_knowledge_jobs(summary)
         self._write_cursor(len(events))
         return summary
 
@@ -354,6 +502,11 @@ class TeamDaemon:
                 "blocked",
                 "jobs_created",
                 "jobs_started",
+                "knowledge_applied",
+                "knowledge_blocked",
+                "knowledge_resumed",
+                "knowledge_stale",
+                "knowledge_started",
                 "packs_prepared",
                 "reconciled",
                 "recovered",

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Orbital Team Manager"
+  short_description: "Compile merged work into durable project knowledge"
+  default_prompt: "Use $orbital-team-manager to compile an Integration Job into a validated Knowledge Proposal."

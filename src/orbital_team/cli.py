@@ -7,6 +7,7 @@ import sys
 from typing import Sequence, TextIO
 
 from .errors import TeamRuntimeError
+from .knowledge_workflow import KnowledgeWorkflow
 from .manager_integration import ManagerIntegrationWorkflow
 from .member_workflow import DEFAULT_CONTEXT_BUDGET, MemberWorkflow
 from .runtime import RuntimeManager
@@ -144,6 +145,36 @@ def _parser() -> argparse.ArgumentParser:
     resume.add_argument("job_id")
     resume.add_argument("--request-id")
     resume.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    knowledge = manager_commands.add_parser(
+        "knowledge", help="compile merged work into canonical project memory"
+    )
+    knowledge_commands = knowledge.add_subparsers(
+        dest="knowledge_command", required=True
+    )
+    propose = knowledge_commands.add_parser(
+        "propose", help="persist a structured Knowledge Proposal"
+    )
+    propose.add_argument("job_id")
+    propose.add_argument("--summary", required=True)
+    propose.add_argument(
+        "--patch",
+        action="append",
+        default=[],
+        help="JSON knowledgePatch object; repeat for multiple canonical files",
+    )
+    propose.add_argument("--request-id")
+    propose.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    validate_knowledge = knowledge_commands.add_parser(
+        "validate", help="validate proposal paths, content, and base hashes"
+    )
+    validate_knowledge.add_argument("proposal_id")
+    validate_knowledge.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
+    apply_knowledge = knowledge_commands.add_parser(
+        "apply", help="apply and locally commit a validated proposal"
+    )
+    apply_knowledge.add_argument("proposal_id")
+    apply_knowledge.add_argument("--request-id")
+    apply_knowledge.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
     return parser
 
 
@@ -158,6 +189,19 @@ def _validation_values(values: Sequence[str]) -> list[dict[str, str]]:
             ) from exc
         if not isinstance(item, dict):
             raise TeamRuntimeError("E_USAGE", "--validation must be a JSON object.")
+        parsed.append(item)
+    return parsed
+
+
+def _knowledge_patches(values: Sequence[str]) -> list[dict[str, object]]:
+    parsed: list[dict[str, object]] = []
+    for value in values:
+        try:
+            item = json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise TeamRuntimeError("E_USAGE", "--patch must be a JSON object.") from exc
+        if not isinstance(item, dict):
+            raise TeamRuntimeError("E_USAGE", "--patch must be a JSON object.")
         parsed.append(item)
     return parsed
 
@@ -282,6 +326,24 @@ def main(argv: Sequence[str] | None = None) -> int:
                 result = integration.resume_job(
                     arguments.job_id, request_id=arguments.request_id
                 )
+            elif arguments.manager_command == "knowledge":
+                knowledge = KnowledgeWorkflow(arguments.workspace)
+                if arguments.knowledge_command == "propose":
+                    result = knowledge.propose(
+                        arguments.job_id,
+                        _knowledge_patches(arguments.patch),
+                        arguments.summary,
+                        request_id=arguments.request_id,
+                    )
+                elif arguments.knowledge_command == "validate":
+                    result = knowledge.validate_proposal(arguments.proposal_id)
+                elif arguments.knowledge_command == "apply":
+                    result = knowledge.apply_proposal(
+                        arguments.proposal_id, request_id=arguments.request_id
+                    )
+                else:  # pragma: no cover
+                    parser.error("unknown manager knowledge command")
+                    return 2
             else:  # pragma: no cover
                 parser.error("unknown manager command")
                 return 2

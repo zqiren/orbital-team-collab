@@ -9,7 +9,7 @@ import sys
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, Sequence
 
 from .constants import PRIVATE_FILE_MODE, SCHEMA_VERSION
 from .errors import TeamRuntimeError
@@ -37,6 +37,27 @@ PROTECTED_ENV_NAMES = {
     "PATH",
     "PYTHONPATH",
 }
+
+
+def knowledge_skill_path() -> Path:
+    candidates = (
+        Path(__file__).resolve().parents[2]
+        / "skills"
+        / "orbital-team-manager"
+        / "SKILL.md",
+        Path(sys.prefix)
+        / "share"
+        / "orbital-team"
+        / "skills"
+        / "orbital-team-manager"
+        / "SKILL.md",
+    )
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    raise TeamRuntimeError(
+        "E_RUNNER_UNAVAILABLE", "Orbital Team Manager knowledge Skill was not found."
+    )
 
 
 def assert_policy_guardrails(policies: list[dict[str, Any]]) -> None:
@@ -122,6 +143,17 @@ def load_manifest(path: Path) -> dict[str, Any]:
             "Runner manifest cannot override protected execution environment values.",
             {"manifest": os.fspath(path), "variables": protected},
         )
+    phases = manifest.get("phases", ["integration"])
+    if (
+        not isinstance(phases, list)
+        or not phases
+        or not set(phases).issubset({"integration", "knowledge"})
+    ):
+        raise TeamRuntimeError(
+            "E_RUNNER_UNAVAILABLE",
+            "Runner manifest phases must contain integration and/or knowledge.",
+            {"manifest": os.fspath(path)},
+        )
     return manifest
 
 
@@ -135,11 +167,13 @@ class CommandManagerRunner:
         agent_type: str = "custom",
         pass_request_as: str = "argument",
         extra_env: dict[str, str] | None = None,
+        phases: Sequence[str] = ("integration",),
     ) -> None:
         self.argv = list(argv)
         self.agent_type = agent_type
         self.pass_request_as = pass_request_as
         self.extra_env = dict(extra_env or {})
+        self.phases = frozenset(phases)
         protected = sorted(PROTECTED_ENV_NAMES.intersection(self.extra_env))
         if protected:
             raise TeamRuntimeError(
@@ -156,6 +190,7 @@ class CommandManagerRunner:
             agent_type=manifest.get("agent_type", path.stem),
             pass_request_as=manifest.get("pass_request_as", "argument"),
             extra_env=manifest.get("env", {}),
+            phases=manifest.get("phases", ["integration"]),
         )
 
     def _environment(self) -> dict[str, str]:
@@ -291,6 +326,33 @@ class RunnerSupervisor:
         assert_policy_guardrails(policies)
         return policies
 
+    def build_knowledge_policies(self) -> list[dict[str, Any]]:
+        policies = [
+            {
+                "allow_additional_args": True,
+                "argv_prefix": ["git", "--no-pager", "show"],
+                "cwd_scope": "canonical_workspace",
+                "id": "inspect-merged-diff",
+            },
+            {
+                "allow_additional_args": True,
+                "argv_prefix": [
+                    sys.executable or "python3",
+                    "-m",
+                    "orbital_team",
+                    "manager",
+                    "knowledge",
+                    "propose",
+                ],
+                "cwd_scope": "canonical_workspace",
+                "id": "knowledge-propose",
+            },
+        ]
+        for policy in policies:
+            validate("commandPolicy", policy)
+        assert_policy_guardrails(policies)
+        return policies
+
     def _report_worktree(self, slug: str, report: dict[str, Any]) -> str | None:
         members = self.workflow._store(slug, "members.json", "memberStore").read()
         member_id = report["submitted_by"].split(":", 1)[1]
@@ -409,6 +471,152 @@ class RunnerSupervisor:
             result_path=result_path,
             stdout_path=stdout_path,
             stderr_path=stderr_path,
+        )
+
+    def prepare_knowledge_run(
+        self,
+        job: dict[str, Any],
+        *,
+        agent_type: str = "custom",
+        timeout_seconds: int = DEFAULT_RUN_TIMEOUT,
+    ) -> RunContext:
+        slug = job["project_slug"]
+        project = self.workflow._project(slug)
+        report = self.workflow._report(slug, job["report_id"])
+        tasks = self.workflow._store(slug, "tasks.json", "taskStore").read()
+        task = tasks["items"].get(job["task_id"])
+        if task is None:
+            raise TeamRuntimeError("E_TASK_NOT_FOUND", "Knowledge run Task was not found.")
+        pack_path = (
+            self.runtime_root
+            / "projects"
+            / slug
+            / "knowledge-packs"
+            / f"{job['id']}-PACK.json"
+        )
+        pack = read_json(pack_path)
+        validate("knowledgePack", pack)
+        run_id = f"{slug}-RUN-{uuid.uuid4()}"
+        run_dir = self._runs_root(slug) / run_id
+        secure_directory(run_dir)
+        stdout_path = run_dir / "stdout.log"
+        stderr_path = run_dir / "stderr.log"
+        request_path = run_dir / "request.json"
+        result_path = run_dir / "result.json"
+        brief_path = run_dir / "brief.md"
+        context_path = run_dir / "context.json"
+        task_path = run_dir / "task.json"
+        canonical = Path(project["canonical_workspace"])
+        memory_paths = {
+            Path(relative).stem.lower(): os.fspath(canonical / relative)
+            for relative in (
+                "orbital/PROJECT_STATE.md",
+                "orbital/DECISIONS.md",
+                "orbital/LESSONS.md",
+                "orbital/INDEX.md",
+            )
+        }
+        context = {
+            "current_head": self.workflow._git_out(canonical, "rev-parse", "HEAD"),
+            "memory_paths": memory_paths,
+            "pack": pack,
+            "source_commit": job["merge_commit"],
+            "task": task,
+        }
+        atomic_write_json(context_path, context)
+        atomic_write_json(task_path, task)
+        actor = f"manager:{project['active_manager_id']}"
+        input_paths = {
+            "context": os.fspath(context_path),
+            "job": os.fspath(self.workflow.jobs._path(job["id"])),
+            "knowledge_pack": os.fspath(pack_path),
+            "report": os.fspath(
+                self.workflow._reports(slug).root / f"{job['report_id']}.json"
+            ),
+            "stderr_log": os.fspath(stderr_path),
+            "stdout_log": os.fspath(stdout_path),
+            "task": os.fspath(task_path),
+            **{f"memory_{name}": value for name, value in memory_paths.items()},
+        }
+        request = {
+            "actor": actor,
+            "allowed_commands": self.build_knowledge_policies(),
+            "allowed_worktree_roots": project["allowed_worktree_roots"],
+            "brief_path": os.fspath(brief_path),
+            "input_paths": input_paths,
+            "job_id": job["id"],
+            "manager_skill_path": os.fspath(knowledge_skill_path()),
+            "phase": "knowledge",
+            "project_slug": slug,
+            "result_path": os.fspath(result_path),
+            "run_id": run_id,
+            "schema_version": SCHEMA_VERSION,
+            "task_id": job["task_id"],
+            "timeout_seconds": timeout_seconds,
+            "workspace": os.fspath(canonical),
+        }
+        validate("managerRunRequest", request)
+        atomic_write_json(request_path, request)
+        atomic_write_private_text(
+            brief_path,
+            self._knowledge_brief(project, job, report, task, pack, request),
+        )
+        record = {
+            "actor": actor,
+            "agent_type": agent_type,
+            "ended_at": None,
+            "id": run_id,
+            "job_id": job["id"],
+            "log_paths": {
+                "stderr": f"runs/{run_id}/stderr.log",
+                "stdout": f"runs/{run_id}/stdout.log",
+                "transcript": None,
+            },
+            "project_slug": slug,
+            "provider_session_id": None,
+            "revision": 0,
+            "started_at": utc_now(),
+            "state": "starting",
+            "task_id": job["task_id"],
+        }
+        with RuntimeLock(self.workflow._project_lock(slug)):
+            self._write_run_record(slug, record)
+        self.workflow._append_event(
+            actor="system:teamd",
+            data={"job_id": job["id"], "phase": "knowledge", "run_id": run_id},
+            event_key=f"run:started:{run_id}",
+            event_type="run.started",
+            slug=slug,
+            timestamp=record["started_at"],
+        )
+        return RunContext(
+            run_id=run_id,
+            run_dir=run_dir,
+            request=request,
+            request_path=request_path,
+            result_path=result_path,
+            stdout_path=stdout_path,
+            stderr_path=stderr_path,
+        )
+
+    @staticmethod
+    def _knowledge_brief(
+        project: dict[str, Any],
+        job: dict[str, Any],
+        report: dict[str, Any],
+        task: dict[str, Any],
+        pack: dict[str, Any],
+        request: dict[str, Any],
+    ) -> str:
+        return (
+            f"# Manager Knowledge Brief — {job['id']}\n\n"
+            f"Project: {project['slug']} · Task: {task['id']} · Report: {report['id']}\n\n"
+            f"Source merge commit: `{job['merge_commit']}`\n\n"
+            f"Report summary: {report['summary']}\n\n"
+            f"Merged diff summary:\n\n```text\n{pack['diff_summary']}\n```\n\n"
+            f"Read `{request['manager_skill_path']}` and every declared canonical memory file. "
+            f"Use only the `knowledge-propose` controlled command to persist full-file patches, "
+            f"then write one schema-valid knowledge result to `{request['result_path']}`.\n"
         )
 
     @staticmethod

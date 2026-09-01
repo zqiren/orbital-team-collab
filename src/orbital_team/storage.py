@@ -93,6 +93,36 @@ def atomic_write_private_text(path: Path, value: str) -> None:
     atomic_write_private_bytes(path, value.encode("utf-8"))
 
 
+def atomic_write_text(path: Path, value: str, *, mode: int = 0o644) -> None:
+    """Atomically replace a versioned text file without chmodding its parent."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(
+        f".{path.name}.tmp-{os.getpid()}-{os.urandom(8).hex()}"
+    )
+    descriptor = os.open(
+        temporary,
+        os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+        mode,
+    )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", closefd=True) as stream:
+            descriptor = -1
+            stream.write(value)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        if os.name == "posix":
+            path.chmod(mode)
+        _fsync_directory(path.parent)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+
+
 def atomic_write_private_bytes(path: Path, payload: bytes) -> None:
     secure_directory(path.parent)
     temporary = path.with_name(
@@ -283,6 +313,8 @@ class ImmutableProjectObjectStore:
         project_slug: str,
         directory: str,
         schema_name: str,
+        *,
+        id_field: str = "id",
     ) -> None:
         if Path(directory).name != directory:
             raise TeamRuntimeError(
@@ -293,6 +325,7 @@ class ImmutableProjectObjectStore:
         self.root = runtime_root / "projects" / project_slug / directory
         self.project_slug = project_slug
         self.schema_name = schema_name
+        self.id_field = id_field
         secure_directory(self.root)
 
     def _path(self, object_id: str) -> Path:
@@ -308,7 +341,7 @@ class ImmutableProjectObjectStore:
         value = read_json(self._path(object_id))
         validate(self.schema_name, value)
         if (
-            value.get("id") != object_id
+            value.get(self.id_field) != object_id
             or value.get("project_slug") != self.project_slug
         ):
             raise TeamRuntimeError(
@@ -324,7 +357,7 @@ class ImmutableProjectObjectStore:
 
     def create_locked(self, value: dict[str, Any]) -> dict[str, Any]:
         validate(self.schema_name, value)
-        object_id = value.get("id")
+        object_id = value.get(self.id_field)
         if not isinstance(object_id, str):
             raise TeamRuntimeError(
                 "E_CORRUPT_RUNTIME", "Immutable project object is missing its ID."
@@ -346,6 +379,26 @@ class ImmutableProjectObjectStore:
                 {"object_id": object_id},
             )
         atomic_write_json(path, value)
+        return value
+
+
+class MutableProjectObjectStore(ImmutableProjectObjectStore):
+    """Schema-valid per-object JSON updated while the project lock is held."""
+
+    def write_locked(self, value: dict[str, Any]) -> dict[str, Any]:
+        object_id = value.get("id")
+        if not isinstance(object_id, str):
+            raise TeamRuntimeError(
+                "E_CORRUPT_RUNTIME", "Mutable project object is missing its ID."
+            )
+        validate(self.schema_name, value)
+        if value.get("project_slug") != self.project_slug:
+            raise TeamRuntimeError(
+                "E_CORRUPT_RUNTIME",
+                "Mutable project object belongs to a different project.",
+                {"object_id": object_id},
+            )
+        atomic_write_json(self._path(object_id), value)
         return value
 
 

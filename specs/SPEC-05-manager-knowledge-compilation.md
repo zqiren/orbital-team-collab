@@ -1,7 +1,7 @@
 ---
 id: SPEC-05
 title: Manager Knowledge Compilation
-status: Planned
+status: Done
 depends_on: [SPEC-04]
 unlocks: [SPEC-08]
 ---
@@ -112,14 +112,14 @@ apply 前记录原文件哈希；若文件已变化，proposal 进入 Stale/Bloc
 
 ## Completion Record
 
-- Final status: —
-- Outcome achieved:
-- Files changed:
-- Verification run:
-- Verification result:
-- Deviations from spec:
-- Decisions recorded:
-- Lessons recorded:
-- Known limitations:
-- Working tree / commit:
-- Next spec readiness:
+- Final status: Done
+- Outcome achieved: 接通 SPEC-04 的 Awaiting Knowledge 边界：`teamd` 启动 phase-aware 短生命周期 Manager knowledge run，生成/校验 Knowledge Proposal，经 project + Git mutation lock 原子 apply 四个 allowlisted canonical memory 文件并创建独立本地 knowledge commit；no-change 不造空 commit；dirty/stale/conflict、Open Question resume、commit 后崩溃恢复、Task/Job Done 与 `integration.completed` 均通过共享 domain/storage 状态机闭环。
+- Files changed: 新增 `src/orbital_team/knowledge_workflow.py`、`skills/orbital-team-manager/{SKILL.md,agents/openai.yaml}`、`tests/test_knowledge_workflow.py`、`docs/34-manager-knowledge-compilation.md`；扩展 `storage.py`、`manager_runner.py`、`teamd.py`、`cli.py`、`__init__.py`、`pyproject.toml`、三个 `demo/runners/*.json` manifest，以及本 spec/index/handoff memory。
+- Verification run: `python3 -m pytest -q tests/test_knowledge_workflow.py`；`python3 -m pytest -q`；`python3 -m compileall -q src tests`；`PYTHONPATH=src python3 -m orbital_team manager knowledge --help`；skill-creator `quick_validate.py skills/orbital-team-manager`；`GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null git diff --check`；本机 Codex 0.144.5 真实启动探测（45 秒硬上限）。
+- Verification result: SPEC-05 专项 8/8、全量 70/70 通过（基线 62，真实新增 8）；临时 Git fixture 验证只 stage allowlist、knowledge commit 的唯一 parent 为 source merge commit、no-change HEAD 不变、dirty Blocked、stale 拒绝覆盖、重复 apply 仅一个 commit/summary/completed event、commit 后 finalize 崩溃可重入，以及 injected knowledge-only runner 端到端只执行一次。Skill 校验和 compileall/diff-check 通过。
+- Deviations from spec: 无产品契约、schema、依赖或范围偏离。实际外部 Manager Agent 双 Report semantic smoke 未完成：Codex CLI 存在但嵌套 sandbox 在 in-process app-server 初始化阶段返回 EPERM；Claude CLI 不可用。未把 deterministic runner 冒充外部 agent smoke。
+- Decisions recorded: 无新增产品决定；实现遵循 D11–D15，尤其 D13 的独立 commit/no-change/dirty workspace/controlled Git 边界。
+- Lessons recorded: Knowledge Change Summary 的冻结 identity 字段是 `summary_id` 而非通用对象的 `id`；共享 immutable store 必须显式配置 schema identity field，不能绕开 storage 层手写 JSON。
+- Known limitations: 外部 agent 的跨两份 Report 语义去重与冲突判断受当前 provider sandbox/CLI 环境阻塞；确定性 domain、Git、恢复与 teamd fixtures 已覆盖，Skill 明确定义 PROJECT_STATE/DECISIONS/LESSONS/INDEX 分类规则。非 POSIX runner 进程树终止仍沿用 SPEC-04 的直接进程 fallback，未在本 session 实测。
+- Working tree / commit: 实现、测试和 handoff 完成并保持未提交；按用户硬约束未 commit/push、未写 `.git`。起始 checkpoint 为用户提供的 `6e30a89`（实现层）与 `fae75d7`（记忆层）。
+- Next spec readiness: SPEC-05 已 Done；SPEC-08 仍等待 SPEC-03、SPEC-06、SPEC-07，因此保持 Planned。下一执行顺序为 SPEC-03 → SPEC-06 → SPEC-07。

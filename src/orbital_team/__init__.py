@@ -1,6 +1,7 @@
 """Orbital Team Workspace file runtime kernel."""
 
 from .constants import RUNTIME_DIR_NAME, SCHEMA_VERSION
+from .knowledge_workflow import KnowledgeWorkflow
 from .manager_integration import ManagerIntegrationWorkflow, job_id_for_report
 from .manager_runner import CommandManagerRunner, ManagerRunner, RunnerSupervisor
 from .member_workflow import MemberWorkflow
@@ -12,6 +13,7 @@ __all__ = [
     "RUNTIME_DIR_NAME",
     "SCHEMA_VERSION",
     "CommandManagerRunner",
+    "KnowledgeWorkflow",
     "ManagerIntegrationWorkflow",
     "ManagerRunner",
     "MemberWorkflow",
