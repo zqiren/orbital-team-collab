@@ -953,6 +953,49 @@ class MemberWorkflow:
             "schema_version": SCHEMA_VERSION,
         }
 
+    def workspace_bindings(self) -> list[dict[str, Any]]:
+        """Return read-only project/member context derived from this worktree."""
+        bindings: list[dict[str, Any]] = []
+        registry = self.manager._registry()
+        for slug in sorted(registry["projects"]):
+            try:
+                member = self._member_for_workspace(slug)
+            except TeamRuntimeError as exc:
+                if exc.code == "E_MEMBER_NOT_FOUND":
+                    continue
+                raise
+            self._verify_member_binding(member)
+            project = self._store(slug, "project.json", "project").read()
+            tasks = self._store(slug, "tasks.json", "taskStore").read()
+            questions = self._store(
+                slug, "open-questions.json", "openQuestionStore"
+            ).read()
+            assigned = [
+                task
+                for task in tasks["items"].values()
+                if task["assignee"] == member["id"]
+                and task["state"] not in TERMINAL_TASK_STATES
+            ]
+            pending_questions = [
+                question
+                for question in questions["items"].values()
+                if question["state"] in OPEN_BLOCKING_STATES
+            ]
+            bindings.append(
+                {
+                    "member": copy.deepcopy(member),
+                    "project": {
+                        "display_name": project["display_name"],
+                        "slug": slug,
+                    },
+                    "questions": sorted(
+                        pending_questions, key=lambda item: item["id"]
+                    ),
+                    "tasks": sorted(assigned, key=lambda item: item["id"]),
+                }
+            )
+        return bindings
+
     def build_context_pack(
         self,
         slug: str,

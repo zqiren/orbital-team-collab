@@ -1,7 +1,7 @@
 ---
 id: SPEC-03
 title: Member Skill & Agent Adapters
-status: Planned
+status: Done
 depends_on: [SPEC-02]
 unlocks: [SPEC-08]
 ---
@@ -104,14 +104,14 @@ Skill 必须要求成员：
 
 ## Completion Record
 
-- Final status: —
-- Outcome achieved:
-- Files changed:
-- Verification run:
-- Verification result:
-- Deviations from spec:
-- Decisions recorded:
-- Lessons recorded:
-- Known limitations:
-- Working tree / commit:
-- Next spec readiness:
+- Final status: Done
+- Outcome achieved: 交付 agent-neutral `orbital-team-member` Skill、确定性 `/team` parser/dispatcher、Claude Code 项目级 command + bounded SessionStart hook、显式 copy/link/uninstall installer，以及共享 schema-valid member Run 记录。所有 mutation 仍调用现有 `teamctl`/`MemberWorkflow`；adapter 拒绝 `--member`/`--actor`/`--workspace` 冒充，SessionStart 只读取 binding/Task/Question 并记录 run/seen event，绝不 claim。
+- Files changed: 新增 `src/orbital_team/member_adapter.py`、`skills/orbital-team-member/`（Skill metadata、installer、Claude command/hook assets）、`tests/test_member_adapters.py`；扩展 `member_workflow.py` 的 read-only worktree binding summary、`storage.py` 的共享 `RunRecordStore`、`pyproject.toml` wheel data，以及本 spec/index/handoff memory。
+- Verification run: `python3 -m pytest -q tests/test_member_adapters.py`；`python3 -m pytest -q`；`python3 -m compileall -q src tests skills/orbital-team-member`；skill-creator `quick_validate.py skills/orbital-team-member`；`PYTHONPATH=src python3 -m orbital_team.member_adapter --help`；临时目录中执行 Claude copy install/uninstall、generic link install/uninstall 与 provider JSON hook entrypoint；`python3 -m pip wheel --no-deps --no-build-isolation` 并检查 wheel payload；`GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null git diff --check`。
+- Verification result: SPEC-03 专项 11/11、全量 81/81 通过（基线 70，真实新增 11）；带空格 query、report/block/status/questions/manager grammar 均映射为无 shell argv；真实临时 worktree fallback claim/start/report 的 actor 为 binding 对应的 `member:alice`，Bob worktree 与显式身份参数均无法冒充；跳过 start 的 Report 仍由 SPEC-02 状态机拒绝。重复 SessionStart 只有一个 Run/started event、Task 无变化、summary ≤4096 bytes、私有 log 为 0600；Claude/generic 安装均可回滚且保留既有 settings。Wheel 包含 module、Skill、metadata、installer 与 assets。
+- Deviations from spec: 无冻结命令、身份、schema、依赖或状态机偏离。未改全局 agent 配置；只有显式 installer 动作写目标项目配置。Manager Skill/runner、Dashboard 与其他 provider 的完整原生 adapter 均未进入本 spec。
+- Decisions recorded: 无新增产品决定；实现遵循 D11、D14、D15。
+- Lessons recorded: 无新增 durable gotcha；沿用沙箱 ProcessPool、pytest EPERM、外部 runner 限制等既有 workaround。
+- Known limitations: 当前环境无 Claude CLI，无法启动真实 Claude session 验证 UI 中的 `/team` discovery；Codex 嵌套 app-server 仍受 EPERM，故使用 injected/真实 subprocess fallback 与模拟 Claude Hook JSON 验证适配语义。Claude command/settings frontmatter 未由 Claude CLI 本体校验。Provider 未给 transcript path 时 Run 明确保存 `transcript=null`；member last-seen 由幂等 `run.seen` lifecycle event 表示。
+- Working tree / commit: 实现、测试和 handoff 完成并保持未提交；按用户硬约束未 commit/push、未写 `.git`。起始 checkpoint 为用户提供的 SPEC-05 实现层 `ed5c52e` 与记忆层 `4e50161`。
+- Next spec readiness: SPEC-03 已 Done；SPEC-08 仍等待 SPEC-06 与 SPEC-07，保持 Planned。下一项为 SPEC-06，完成后 SPEC-07 可转 Ready。

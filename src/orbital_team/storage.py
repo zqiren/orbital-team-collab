@@ -402,6 +402,55 @@ class MutableProjectObjectStore(ImmutableProjectObjectStore):
         return value
 
 
+class RunRecordStore:
+    """Schema-valid run records shared by Manager and Member adapters."""
+
+    def __init__(self, runtime_root: Path, project_slug: str) -> None:
+        self.root = runtime_root / "projects" / project_slug / "runs"
+        self.project_slug = project_slug
+        secure_directory(self.root)
+
+    def _path(self, run_id: str) -> Path:
+        if not run_id or Path(run_id).name != run_id:
+            raise TeamRuntimeError(
+                "E_GUARDRAIL_VIOLATION",
+                "Run ID must not contain a path.",
+                {"run_id": run_id},
+            )
+        return self.root / run_id / "run.json"
+
+    def read(self, run_id: str) -> dict[str, Any]:
+        value = read_json(self._path(run_id))
+        validate("runRecord", value)
+        if value["id"] != run_id or value["project_slug"] != self.project_slug:
+            raise TeamRuntimeError(
+                "E_CORRUPT_RUNTIME",
+                "Run record has inconsistent identity.",
+                {"run_id": run_id},
+            )
+        return value
+
+    def exists(self, run_id: str) -> bool:
+        return self._path(run_id).is_file()
+
+    def list(self) -> list[dict[str, Any]]:
+        return [
+            self.read(path.parent.name)
+            for path in sorted(self.root.glob("*/run.json"))
+        ]
+
+    def write_locked(self, value: dict[str, Any]) -> dict[str, Any]:
+        validate("runRecord", value)
+        if value["project_slug"] != self.project_slug:
+            raise TeamRuntimeError(
+                "E_CORRUPT_RUNTIME", "Run record belongs to another project."
+            )
+        path = self._path(value["id"])
+        secure_directory(path.parent)
+        atomic_write_json(path, value)
+        return value
+
+
 class EventLog:
     def __init__(self, runtime_root: Path) -> None:
         self.path = runtime_root / "events.jsonl"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Orbital Team Member"
+  short_description: "Claim, execute, and report Team Workspace tasks"
+  default_prompt: "Use $orbital-team-member to claim and complete a Team Workspace task through the bound worktree identity."
