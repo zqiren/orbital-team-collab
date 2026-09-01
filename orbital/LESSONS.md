@@ -50,3 +50,8 @@
 **What happened:** Knowledge Change Summary 的冻结 schema 使用 `summary_id` 作为 identity，但通用 immutable project object store 最初硬编码读取 `id`，导致 knowledge commit 已创建后 runtime finalize 报 `E_CORRUPT_RUNTIME`；绕开 store 手写 summary JSON 会违反单一 storage 边界。
 **Do instead:** 共享 immutable object store 显式接受 schema identity field，默认 `id`，Knowledge Summary 配置为 `summary_id`；崩溃恢复测试必须覆盖 Git commit 已成功、runtime summary/status 尚未全部落盘的窗口。
 **Keywords:** json-schema, identity, summary_id, immutable-store, knowledge-commit, crash-recovery
+
+### 2026-09-01 — sandbox-loopback-listen-eperm
+**What happened:** SPEC-07 的临时 Dashboard server 即使绑定 `127.0.0.1:0`，当前 macOS sandbox 仍在 `socket.bind` 返回 `PermissionError: Operation not permitted`；这发生在任何 browser/HTTP request 之前，不是 loopback guard、route 或 domain failure。
+**Do instead:** HTTP adapter 设计为 handler factory，测试用内存 socket transport 驱动同一个 `BaseHTTPRequestHandler` 完成 raw GET/POST/headers/body/status smoke；server factory 单测 loopback address guard。真实 listen/browser smoke 在普通本机运行 `teamctl dashboard --host 127.0.0.1`，不得把沙箱内存 transport 冒充 live socket 成功。
+**Keywords:** dashboard, loopback, socket, sandbox, EPERM, http, testing

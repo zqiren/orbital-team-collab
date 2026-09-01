@@ -38,12 +38,15 @@
 - docs/33-event-driven-manager-integration.md — teamd、Manager commands/runner、受控 merge、恢复、日志权限与验证说明
 - docs/34-manager-knowledge-compilation.md — Knowledge Proposal、受控 memory apply/独立 commit、no-change、冲突与恢复说明
 - docs/35-im-context-and-potential-task-stub.md — 离线 IM provider seam、fixture extraction、Potential Task triage/Promote 与 Open Question 命令说明
+- docs/36-team-dashboard.md — loopback Dashboard 启动、actor binding、2 秒文件投影刷新、受控 routes 与本地日志安全说明
 - src/orbital_team/manager_integration.py — Integration Job/record 状态机、Manager commands、受控 Git merge 与 Knowledge Pack 边界
 - src/orbital_team/manager_runner.py — ManagerRunner protocol、manifest adapter、Task-aware private run inputs 与进程监管
 - src/orbital_team/manager_proc.py — 离线 deterministic subprocess Manager adapter，只经受控 domain command merge
 - src/orbital_team/teamd.py — report event tail/watch、project Manager execution lock、retry 与 canonical file reconciliation
 - src/orbital_team/knowledge_workflow.py — Knowledge Proposal 校验、allowlisted canonical memory apply、独立 commit、summary 与恢复状态流
 - src/orbital_team/im_context.py — IM provider/registry、fixture ContextItem extraction 与 Potential Task/Open Question domain workflow
+- src/orbital_team/dashboard.py — shared runtime projection、Human actor-bound command adapter、loopback HTTP host 与安全日志读取
+- src/orbital_team/dashboard_static/ — 无构建链的 Dashboard HTML/CSS/ES modules
 - src/orbital_team/skills/manager-integration.md — agent-neutral Manager integration procedure 与 guardrails
 - skills/orbital-team-manager/ — agent-neutral durable knowledge 分类、Proposal 生成与受控命令 Skill
 - skills/orbital-team-member/ — Member workflow Skill、Claude project command/SessionStart hook、可回滚 copy/link installer 与 generic fallback
@@ -53,6 +56,7 @@
 - tests/test_knowledge_workflow.py — SPEC-05 的 allowlist/独立 commit、no-change、dirty/stale、teamd、幂等与崩溃恢复测试
 - tests/test_member_adapters.py — SPEC-03 的 slash parser、binding actor、fallback、Hook/run、冒充拒绝与 adapter install tests
 - tests/test_im_context.py — SPEC-06 的 provider、fixture evidence、去重、triage/Promote、Question gate、幂等与恢复 tests
+- tests/test_dashboard.py — SPEC-07 的 projection、domain routes、actor 权限、HTTP、刷新/重启、损坏与日志隔离 tests
 
 ## 规范 Schema（schemas/）
 - schemas/README.md — runtime 文件/对象与 JSON Schema `$defs` 的消费映射
