@@ -28,6 +28,7 @@
 - conftest.py — pytest 沙箱安全收集 shim（EPERM 时按无 conftest 处理），正常环境 no-op
 - src/orbital_team/ — common-dir resolver、schema/models、atomic storage、events/idempotency、runtime lifecycle 与 CLI
 - src/orbital_team/member_workflow.py — current-worktree Member identity、Task resolve/state machine、原子 claim、Context Pack 与 Git-bound Report domain service
+- src/orbital_team/member_adapter.py — `/team` grammar/CLI dispatcher、worktree-bound SessionStart summary 与 schema-valid member Run registration
 - tests/test_runtime_kernel.py — SPEC-01 的临时 Git repo/worktree、并发、损坏恢复、reset 与权限验证
 - tests/test_member_workflow.py — SPEC-02 的双进程 claim、状态转换、blocking question、Git Report、schema、幂等与负向测试
 - demo/seed/ — schema-valid synthetic Apollo 初始化输入与显式 demo reset marker
@@ -42,9 +43,11 @@
 - src/orbital_team/knowledge_workflow.py — Knowledge Proposal 校验、allowlisted canonical memory apply、独立 commit、summary 与恢复状态流
 - src/orbital_team/skills/manager-integration.md — agent-neutral Manager integration procedure 与 guardrails
 - skills/orbital-team-manager/ — agent-neutral durable knowledge 分类、Proposal 生成与受控命令 Skill
+- skills/orbital-team-member/ — Member workflow Skill、Claude project command/SessionStart hook、可回滚 copy/link installer 与 generic fallback
 - demo/runners/ — builtin、Codex、Claude Code runner manifests；provider manifests 需相应本地 CLI
 - tests/test_manager_integration.py — SPEC-04 的真实 Git merge、串行、幂等、失败、权限、timeout 与崩溃恢复测试
 - tests/test_knowledge_workflow.py — SPEC-05 的 allowlist/独立 commit、no-change、dirty/stale、teamd、幂等与崩溃恢复测试
+- tests/test_member_adapters.py — SPEC-03 的 slash parser、binding actor、fallback、Hook/run、冒充拒绝与 adapter install tests
 
 ## 规范 Schema（schemas/）
 - schemas/README.md — runtime 文件/对象与 JSON Schema `$defs` 的消费映射
