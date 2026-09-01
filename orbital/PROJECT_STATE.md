@@ -2,7 +2,7 @@
 # PROJECT_STATE
 
 ## 当前阶段
-用户指示（2026-09-01）把剩余 spec（SPEC-03～09，含 demo）由 claude-code 派发子 agent 跑完，主 session 逐 spec 复测 + checkpoint commit。pytest 环境修复：根目录 pytest.ini（testpaths/pythonpath=src）+ conftest.py EPERM shim，基线全量绿；SPEC-04（关键路径）由 claude-code 编排执行中。
+SPEC-04 Event-driven Manager Integration 已完成并保持未提交：`teamd`、Integration Job/record、ManagerRunner/manifest、Task-aware private brief、受控 merge、project Manager/git locks、retry/reconciliation 与 12 项专项测试均已交付；全量 `python3 -m pytest -q` 为 62 passed。下一阶段可执行 SPEC-05；SPEC-06 仍 Ready，故 SPEC-07 依赖未齐。
 
 ## 已完成（2026-09-01）
 - orbital/instructions/project_goals.md — 项目目标
@@ -21,6 +21,7 @@
 - tests/test_runtime_kernel.py — 24 项 Git common-dir、并发、崩溃恢复、幂等、reset、路径 guard 与权限测试
 - demo/seed/、docs/31-file-runtime-kernel.md — 版本化 Apollo 初始化输入与 SPEC-01 安装/运行说明
 - src/orbital_team/member_workflow.py、tests/test_member_workflow.py、docs/32-member-workflow.md — worktree identity、Task resolve/原子 claim、bounded Context Pack、成员状态机、Git-bound Report 与 26 项专项测试
+- src/orbital_team/manager_integration.py、manager_runner.py、manager_proc.py、teamd.py、tests/test_manager_integration.py、docs/33-event-driven-manager-integration.md — report event 自动调度、Integration Job/Manager Run、受控 Git merge、失败/崩溃恢复、私有日志与 12 项专项测试
 - orbital-src/ — Orbital 官方 main 源码快照（git clone 被沙箱挡，改 tarball，见 LESSONS）
 
 ## 核心结论（已锚定）
@@ -35,7 +36,7 @@
 - 工作系统包含 Confirmed Tasks、Potential Tasks、Open Questions；IM v1 只留 provider stub/fixture，Potential Task 经 triage 后才能成为可领取任务
 
 ## 下一步
-1. 剩余 spec 由 claude-code 编排执行，顺序 SPEC-04 → 05 → 03 → 06 → 07 → 08 → 09（每 spec 单独派发，主 session 验证后 checkpoint）；SPEC-04（teamd、Integration Job、ManagerRunner、受控 merge）已派发
+1. 剩余 spec 逐 spec 执行：下一项 SPEC-05（Ready），之后 SPEC-03、SPEC-06、SPEC-07、SPEC-08、SPEC-09；每个 spec 由主 session 复测后 checkpoint。SPEC-07 仅在 SPEC-06 Done 后改 Ready
 2. SPEC-03 必须复用 `MemberWorkflow`/`teamctl` 并由 current worktree join binding 推导 actor，不复制状态机或接受可冒充的 member payload；SPEC-04 从 `report.submitted` 和 immutable Report 冷启动
 3. 每个 spec 完成后由主 session 复测并本地 checkpoint commit，发送给 Kimi/其他外部对象仍需单独授权
 4. checkpoint 历史：SPEC-00 `902a870`、SPEC-01 `06691b4`、SPEC-02 `83cbf6e`；子 agent 沙箱可能无法写 `.git/index.lock`，实现后由主 session 复测并 commit；git 命令仍须加 `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null`（见 LESSONS）
@@ -43,5 +44,5 @@
   <!--mem id:380ae9 created:2026-09-01 touched:2026-09-01-->
 
 ## 阻塞
-- 无实现阻塞；SPEC-04 执行中（claude-code 编排），其余按派发顺序排队。
+- SPEC-04 无实现 blocker；外部 Codex runner smoke 在当前嵌套 sandbox 的 in-process app-server 初始化处被 EPERM 阻塞，内置 subprocess runner 的真实受控 Git smoke 已通过。Claude CLI 当前不可用。
 - 已完成的 checkpoint（`902a870`、`06691b4`、`83cbf6e`）均未 push 到 origin/main；沙箱内无 HTTPS 凭据，由用户在自己终端决定 push 节奏。

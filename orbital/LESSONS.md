@@ -35,3 +35,13 @@
 **What happened:** 沙箱内任何 pytest 运行（含显式 `pytest tests/`）收集阶段即报 `PermissionError: ... '/Users/keanezhou/Desktop'`。真实根因：pytest 8.3 收集 rootpath（=仓库根）的 Dir 节点时，`Session._collect_path` → `gethookproxy(rootpath.parent)` → `PytestPluginManager._getconftestmodules(Desktop)` → `_get_directory` 对 Desktop 调 `is_file()` stat，被沙箱拒绝；与 rootdir 探测无关，仅在仓库根放 pytest.ini 无效。
 **Do instead:** 仓库根 `conftest.py` monkeypatch `PytestPluginManager._getconftestmodules`：捕获 `PermissionError` 返回空 conftest 列表（正常机器不会触发该分支）；根目录 `pytest.ini` 设 `testpaths = tests` 钉住收集范围、`pythonpath = src` 让 src 布局免安装可导入。统一用 `python3 -m pytest -q` 跑全量。
 **Keywords:** pytest, rootpath, gethookproxy, conftest, sandbox, EPERM, collection
+
+### 2026-09-01 — manager-runner-process-tree-timeout
+**What happened:** `subprocess.run(..., timeout=...)` 只保证终止直接 runner CLI；runner 启动的 validation/agent 子进程可能脱离父进程继续写文件。嵌套 Codex smoke 还会在当前 sandbox 的 in-process app-server 初始化阶段返回 EPERM，CLI 存在不等于 provider 环境可运行。
+**Do instead:** POSIX runner 启动独立 session/process group，超时时 `killpg` 后 wait；外部 agent smoke 必须记录真实 stderr/result，不能只用可执行文件存在推断成功。非 POSIX 先使用直接进程 fallback，并把未验证的进程树语义写入限制。
+**Keywords:** manager-runner, timeout, process-group, orphan, codex, sandbox, EPERM
+
+### 2026-09-01 — teamd-canonical-reconciliation
+**What happened:** create-job transaction 若在 Job JSON 落盘后、Task→Integrating 或 `integration.queued` event 前崩溃，单看 event cursor/pending Report 会永久跳过该 Report；受控 merge 已落盘但 runner result 尚未写出时强行 Retryable 也会导致非法转换或重复 merge 风险。
+**Do instead:** teamd 每轮直接扫描 Job/Task/event canonical files，重入原 idempotent create command补齐缺失写入；若 Job 已有 guarded merge commit/event，则继续 Knowledge Pack 准备，绝不把它退回 merge 队列。
+**Keywords:** teamd, crash-recovery, reconciliation, idempotency, partial-write, duplicate-merge

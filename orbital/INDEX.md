@@ -23,7 +23,7 @@
 - README 电梯陈述、可运行 demo — 按 SPEC-01～SPEC-09 分阶段交付
 
 ## Runtime 实现
-- pyproject.toml — Python 3.11+ package、`teamctl` console entry 与 jsonschema/filelock 依赖声明
+- pyproject.toml — Python 3.11+ package、`teamctl`/`teamd` console entries 与 jsonschema/filelock 依赖声明
 - pytest.ini — 钉住 pytest rootdir/testpaths，避免收集越出工作区触发沙箱 EPERM
 - conftest.py — pytest 沙箱安全收集 shim（EPERM 时按无 conftest 处理），正常环境 no-op
 - src/orbital_team/ — common-dir resolver、schema/models、atomic storage、events/idempotency、runtime lifecycle 与 CLI
@@ -33,6 +33,14 @@
 - demo/seed/ — schema-valid synthetic Apollo 初始化输入与显式 demo reset marker
 - docs/31-file-runtime-kernel.md — File Runtime Kernel 安装、运行、安全与验证说明
 - docs/32-member-workflow.md — Member join/claim/start/block/status/report 命令、Context Pack、Git binding 与稳定错误使用说明
+- docs/33-event-driven-manager-integration.md — teamd、Manager commands/runner、受控 merge、恢复、日志权限与验证说明
+- src/orbital_team/manager_integration.py — Integration Job/record 状态机、Manager commands、受控 Git merge 与 Knowledge Pack 边界
+- src/orbital_team/manager_runner.py — ManagerRunner protocol、manifest adapter、Task-aware private run inputs 与进程监管
+- src/orbital_team/manager_proc.py — 离线 deterministic subprocess Manager adapter，只经受控 domain command merge
+- src/orbital_team/teamd.py — report event tail/watch、project Manager execution lock、retry 与 canonical file reconciliation
+- src/orbital_team/skills/manager-integration.md — agent-neutral Manager integration procedure 与 guardrails
+- demo/runners/ — builtin、Codex、Claude Code runner manifests；provider manifests 需相应本地 CLI
+- tests/test_manager_integration.py — SPEC-04 的真实 Git merge、串行、幂等、失败、权限、timeout 与崩溃恢复测试
 
 ## 规范 Schema（schemas/）
 - schemas/README.md — runtime 文件/对象与 JSON Schema `$defs` 的消费映射
