@@ -35,7 +35,7 @@
 | [SPEC-06](SPEC-06-im-context-and-potential-task-stub.md) | IM Context & Potential Task Stub | Discovery | Done | SPEC-01 | SPEC-07, SPEC-08 |
 | [SPEC-07](SPEC-07-team-dashboard.md) | Tasks / Potential Tasks / Open Questions Dashboard | UI | Done | SPEC-04, SPEC-06 | SPEC-08 |
 | [SPEC-08](SPEC-08-demo-fixture-and-orchestration.md) | Demo Fixture & Multi-agent Orchestration | Demo | Done | SPEC-03, SPEC-05, SPEC-06, SPEC-07 | SPEC-09 |
-| [SPEC-09](SPEC-09-e2e-hardening-and-delivery.md) | End-to-end Hardening & Delivery | Delivery | Ready | SPEC-08 | — |
+| [SPEC-09](SPEC-09-e2e-hardening-and-delivery.md) | End-to-end Hardening & Delivery | Delivery | Done | SPEC-08 | — |
 
 ## Critical Path
 

@@ -6,6 +6,9 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
+.pytest_cache/
+build/
+dist/
 
 # Orbital 官方源码快照（只读参考，55MB，不进交付 repo — 见 orbital/INDEX.md）
 orbital-src/
@@ -17,5 +20,6 @@ orbital/tool-results/
 orbital/output/
 orbital/queue.json
 orbital/approval_history.jsonl
-orbital/sub_agents/**/*.jsonl
-orbital/sub_agents/**/.latest
+# sub_agents 下只有各 agent 的 MEMORY.md 是版本化交付文件（DECISIONS D10）
+orbital/sub_agents/*/*
+!orbital/sub_agents/*/MEMORY.md

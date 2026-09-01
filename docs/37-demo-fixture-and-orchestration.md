@@ -42,7 +42,7 @@ python3 -m orbital_team dashboard --workspace /exact/root/canonical \
 ## Runner 与 replay
 
 默认 `builtin` runner 不需要网络或外部 agent CLI，同时覆盖 integration 与 knowledge
-phase。`doctor --runner codex` 或 `doctor --runner claude` 会检查相应 manifest、可执行文件
+phase。`doctor --runner codex` 或 `doctor --runner claude-code` 会检查相应 manifest、可执行文件
 及两个 phase；缺失时 `setup --runner ...` 在创建临时根之前返回
 `E_RUNNER_UNAVAILABLE`。外部 runner 选择只改临时目录中的 seed 副本，不修改版本化 seed。
 

@@ -1,6 +1,6 @@
 # 30 — Orbital Team Workspace Roadmap
 
-> 状态：SPEC-00 冻结路线（2026-09-01）  
+> 状态：M0～M7 / SPEC-00～09 已完成；Post-v1 路线保持未实现（2026-09-01）
 > 原型执行索引：`specs/README.md`
 
 ## 1. 路线原则
@@ -162,6 +162,13 @@ SPEC-00 → SPEC-01 → SPEC-02 → SPEC-04 → SPEC-05 ┐
 - IM fixture 只产生候选/问题。
 - runtime 与 logs 本地持久但不进入 Git；repo 前后状态可证明未污染。
 - fake runner 回归稳定，至少一次真实 agent live rehearsal 可复现。
+
+### 最终实现证据与未覆盖项
+
+- disposable clean-copy 可完成 editable install、完整 tests、builtin 双成员 live-scripted pipeline、knowledge、projection、replay/reset，并证明 source repo 未污染。
+- builtin runner 覆盖真实 subprocess/worktree/Git/domain 闭环；replay 明确 simulated，二者均不冒充 external LLM agent。
+- 当前 sandbox 未满足“external LLM agent live rehearsal”和“真实 loopback browser/socket”两条环境证据：nested Codex provider 初始化 EPERM、Claude CLI 不可用、loopback bind EPERM。普通本机复测步骤固定在 `docs/38-final-verification.md`，这些限制不扩大或隐藏 v1 产品范围。
+- 根 `README.md`、Protocol/schema、SPEC Completion Records 与 `scripts/verify_clean_copy.py` 构成最终 reviewer handoff。
 
 ## 5. Post-v1 产品路线
 

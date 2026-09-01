@@ -1,8 +1,8 @@
 # 22 — Orbital Team Workspace Protocol
 
-> 状态：SPEC-00 规范性契约（2026-09-01）  
+> 状态：Protocol/schema 1.0 规范性契约；SPEC-01～09 实现与交付已收敛（2026-09-01）
 > Schema bundle：`schemas/v1/orbital-team.schema.json`  
-> 本文中的 MUST / MUST NOT / SHOULD 为后续实现约束。
+> 本文中的 MUST / MUST NOT / SHOULD 是实现、adapter 与最终验收的持续约束。
 
 ## 1. 版本与编码
 

@@ -1,5 +1,7 @@
 # 00 — 作业简报 (Assignment Brief)
 
+> 交付状态：SPEC-00～09 已完成；最终产品入口与可运行 quickstart 见根 `README.md`。下文保留最初作业目标与成功标准，作为验收依据。
+
 > 一句话：为 Kimi PM 面试作业产出「Orbital Team Feature」产品规划 repo。
 > Kimi 的质疑是全文的靶心——**「Orbital 和 Claude Code / Codex 太像了」**。
 

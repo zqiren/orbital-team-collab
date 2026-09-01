@@ -1,7 +1,7 @@
 ---
 id: SPEC-09
 title: End-to-end Hardening & Delivery
-status: Planned
+status: Done
 depends_on: [SPEC-08]
 unlocks: []
 ---
@@ -95,14 +95,14 @@ README 必须让评审者在以下层级获得信息：
 
 ## Completion Record
 
-- Final status: —
-- Outcome achieved:
-- Files changed:
-- Verification run:
-- Verification result:
-- Deviations from spec:
-- Decisions recorded:
-- Lessons recorded:
-- Known limitations:
-- Working tree / commit:
-- Next spec readiness:
+- Final status: Done
+- Outcome achieved: 从 Kimi 评审者视角完成根 README 电梯陈述、两层文件模型/事件图、可执行 quickstart、文档导航、限制与许可说明；新增 disposable clean-copy verifier，在全新临时 Git repo + 隔离 venv 中执行 editable install、完整 tests、CLI help、builtin 双成员 live-scripted demo、status/replay/reset、Dashboard bind 探测、source fingerprint 与 clean status；收敛全部 spec 状态、最终验证/录制指南、ignore 与隐私/凭证/绝对路径扫描。
+- Files changed: 新增 `README.md`、`THIRD_PARTY_NOTICES.md`、`docs/38-final-verification.md`、`scripts/{__init__.py,verify_clean_copy.py}`、`tests/test_delivery_contract.py`；更新 `.gitignore`、`docs/{00-assignment-brief.md,20-prd.md,21-architecture.md,22-protocol.md,30-roadmap.md,37-demo-fixture-and-orchestration.md}`、Spec Index/本 spec，以及 Orbital state/index；从版本化 memory 文档中移除本机绝对路径与个人 email。
+- Verification run: 收尾 session 实测：`python3 -m pytest -q`（根工作树全量）；`python3 -m pytest -q tests/test_delivery_contract.py`；`python3 scripts/verify_clean_copy.py --dashboard-policy allow`；真实 loopback HTTP smoke（`create_dashboard_server` + `urllib` 请求 `/` 与 `/api/bootstrap`，随后 demo reset）；README/docs/specs 全量相对链接检查；`rg` 扫描用户绝对路径、用户名、email 与 secret/token/key 模式；`GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null git status/diff/check-ignore` 审计。
+- Verification result: 接手基线为 `1 failed, 111 passed`（失败源：交付扫描测试误扫 `.gitignore` 已排除的机器管理 runtime——`orbital/output/` 与新编排器写入 `orbital/sub_agents/dsh/` 的 `.yml`/session 文件；修复扫描/copy/gitignore 三处共同的排除边界，未弱化断言）。修复后根工作树全量 `112 passed in 111.55s`；clean-copy verifier `ok:true`：copy 内 `112 passed in 111.81s`，builtin demo 40 events、2 个 Done Integration Jobs、2 份 knowledge summaries、IM Promote Task 保持 Draft，replay 明确 simulated，reset 后 copy `git status` 干净且 source fingerprint 未变化。本 session loopback bind 真实成功（随机端口）并完成真实 socket 上的 `GET /`（200，4157 bytes）与 `GET /api/bootstrap`（200，actor 绑定 JSON）；交付树 0 死链，无用户路径/用户名/email/secret 命中。
+- Deviations from spec: 首轮执行者（dsh）中途终止，其自报「112/112」在当时不实（实测 1 failed/111 passed）；本 record 由收尾 session 以独立实测重写。默认 builtin runner 是真实 subprocess/worktree/受控 Git/domain 闭环的 live-scripted Manager，明确不是 external LLM agent；external Codex/Claude Code rehearsal 未完成，如实记为 limitation。先前记录的 loopback bind EPERM 在收尾环境未复现，bind+HTTP smoke 真实通过；浏览器级可视化 walkthrough 仍留普通本机。无 Node frontend build，静态 HTML/CSS/ES modules 以 package data + 测试/安全扫描交付。
+- Decisions recorded: 无新增冻结产品决定；D10 补记 `orbital/sub_agents/*/` 白名单（只版本化 MEMORY.md，其余 harness runtime 一律忽略）。根 repo 未声明开源许可证、不推断使用授权，第三方 attribution 见 `THIRD_PARTY_NOTICES.md`。
+- Lessons recorded: delivery-scan-runtime-allowlist——交付边界三处（`.gitignore`、delivery 扫描测试、clean-copy `_ignored`）必须表达同一份机器 runtime 清单；sub_agents 用 MEMORY.md 白名单而非枚举扩展名；此类失败先判定命中文件是否属于交付集，修排除范围而非弱化断言。
+- Known limitations: v1 仍为单机/POSIX 信任边界；external Codex/Claude Code live rehearsal 与浏览器级可视化 walkthrough 需在具备登录 agent CLI/浏览器的普通本机复测；非 POSIX 权限与 runner 进程树未实测；没有真实 IM、remote Git 同步、Team Cloud、SSO/RBAC、Approval/Budget；README 的 clone URL 在用户 push origin 前尚不可用；本作业 repo 未声明开源许可证。
+- Working tree / commit: 全部 SPEC-09 改动（dsh 产出 + 收尾修复）保持未 commit、未碰 `.git`；最终 checkpoint 由主 session 复测后执行。
+- Next spec readiness: SPEC-00～09 全部 Done，无后继 spec。剩余动作：主 session 最终 checkpoint；用户决定 push 与向 Kimi 发送（需单独授权）；可选补充 external agent 与浏览器可视化证据。

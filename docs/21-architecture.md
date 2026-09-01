@@ -1,6 +1,6 @@
 # 21 — Orbital Team Workspace Architecture
 
-> 状态：SPEC-00 冻结契约（2026-09-01）  
+> 状态：Protocol 1.0 冻结架构；SPEC-01～09 实现与最终 clean-copy 验证已收敛（2026-09-01）
 > 规范性 schema：`schemas/v1/orbital-team.schema.json`  
 > 命令、状态机与错误语义：`docs/22-protocol.md`
 

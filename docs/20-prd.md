@@ -1,6 +1,6 @@
 # 20 — Orbital Team Workspace PRD
 
-> 状态：SPEC-00 冻结契约（2026-09-01）  
+> 状态：Protocol 1.0 冻结契约；SPEC-01～09 已按此实现并完成交付收敛（2026-09-01）
 > 上游：`docs/02-competitive-landscape.md`、`docs/10-user-scenarios.md`、`docs/11-team-feature-directions.md`
 
 ## 1. 一句话
@@ -161,3 +161,12 @@ Potential Task 不能被直接领取；只有 Promote 后生成的 Draft Task �
 - v1 的 OS identity 等于本机信任边界，`human:<member-id>` 不是远程认证。
 - provider 不暴露 transcript 时，只能展示 run metadata、stdout/stderr 或日志指针。
 - POSIX 文件权限是 v1 默认目标；其他平台需在实现验证中记录等价边界。
+- 默认验收 runner 是完全离线的 builtin scripted Manager；外部 Codex/Claude Code 的实际可用性取决于本机 CLI、登录与 provider sandbox，不能由 replay 或 CLI 文件存在替代。
+- 受限 sandbox 可验证 Dashboard handler/projection 但可能禁止 loopback bind；真实 browser/socket 必须在普通本机单独记录。
+
+## 12. 实现与证据
+
+- 根 `README.md` 提供 30 秒立论、架构图与 5 分钟 quickstart。
+- `specs/README.md` 的 SPEC-00～09 均为 Done，每份 Completion Record 保存实际验证与偏离。
+- `scripts/verify_clean_copy.py` 从 disposable copy 验证 install、tests、CLI、demo、reset、repo isolation 与可选 live bind。
+- `docs/38-final-verification.md` 给出最终测试矩阵、external runner 判定标准与无隐私泄漏的录制清单。
