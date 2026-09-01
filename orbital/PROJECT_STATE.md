@@ -2,7 +2,7 @@
 # PROJECT_STATE
 
 ## 当前阶段
-SPEC-09 收尾与交付终审已由 claude-code 完成（dsh 产出经逐项审计后保留并修复）：接手基线 1 failed/111 passed，失败源为交付扫描测试误扫机器管理 runtime（`orbital/output/` 与 dsh harness 写入 `orbital/sub_agents/dsh/` 的 `.yml`/session 文件）；修复扫描/clean-copy/gitignore 三处共同排除边界（sub_agents 白名单只版本化 MEMORY.md），未弱化断言。终审结论：可交付。全部 SPEC-09 改动仍未 commit，待主 session 复测后最终 checkpoint。
+SPEC-09 收尾与交付终审已由 claude-code 完成（dsh 产出经逐项审计后保留并修复）：接手基线 1 failed/111 passed，失败源为交付扫描测试误扫机器管理 runtime（`orbital/output/` 与 dsh harness 写入 `orbital/sub_agents/dsh/` 的 `.yml`/session 文件）；修复扫描/clean-copy/gitignore 三处共同排除边界（sub_agents 白名单只版本化 MEMORY.md），未弱化断言。终审结论：可交付。主 session 独立复测 112/112 后已完成最终 checkpoint：`855d637`（feat SPEC-09）+ `2d63dad`（chore 记忆）。SPEC-00～09 全部完成，repo 处于可交付状态。
 
 ## 本轮完成（2026-09-01，claude-code 收尾实测）
 - 根工作树全量 `python3 -m pytest -q` = 112 passed in 111.55s；`scripts/verify_clean_copy.py --dashboard-policy allow` ok:true（copy 内 112 passed in 111.81s、builtin demo 40 events/2 Done Jobs/2 knowledge summaries、replay simulated、reset 后 source fingerprint 未变）。
@@ -11,12 +11,12 @@ SPEC-09 收尾与交付终审已由 claude-code 完成（dsh 产出经逐项审�
 - 隐私扫描：交付树无用户绝对路径、无用户名/email、无 secret/token/key 模式命中。
 
 ## 下一步
-1. claude-code 已完成 SPEC-09 收尾 + 交付终审（结论：可交付）；主 session 独立复测后做最终 checkpoint（feat + chore），再向用户报告
+1. 已完成：claude-code SPEC-09 收尾 + 终审通过；主 session 独立复测（112/112、扫描测试断言未弱化、.gitignore/扫描/clean-copy 三处边界一致）后 checkpoint `855d637`/`2d63dad`。剩余动作只有用户本机 push。
   <!--mem id:bfc709 created:2026-09-01 touched:2026-09-01-->
 2. [user] 用户决定何时 push 或发送给 Kimi；发送外部对象仍需单独明确授权。
   <!--mem id:df866e created:2026-09-01 touched:2026-09-01-->
 3. 可选环境证据：普通本机浏览器可视化 walkthrough（bind 与 HTTP GET smoke 已在收尾环境真实通过），以及已登录 provider 中的 external Codex/Claude Code Manager/Member rehearsal；不得用 builtin/replay 替代。
-4. Git checkpoint 链截至本轮前：SPEC-00 `902a870`、SPEC-01 `06691b4`、SPEC-02 `83cbf6e`、SPEC-04 `6e30a89`/`fae75d7`、SPEC-05 `ed5c52e`/`4e50161`、SPEC-03 `cbe716a`、SPEC-06 `97be555`、SPEC-07 `1798346`/`6b98ea1`、SPEC-08 `806958a`。
+4. Git checkpoint 链（本地 main，全部完成）：SPEC-00 `902a870`、SPEC-01 `06691b4`、SPEC-02 `83cbf6e`、SPEC-04 `6e30a89`/`fae75d7`、SPEC-05 `ed5c52e`/`4e50161`、SPEC-03 `cbe716a`、SPEC-06 `97be555`、SPEC-07 `1798346`/`6b98ea1`、SPEC-08 `806958a`、SPEC-09 `855d637`/`2d63dad`。
 
 ## Blockers / limitations
 - loopback bind EPERM 在收尾环境不复现（bind + HTTP GET smoke 真实通过）；浏览器级可视化 walkthrough 仍留普通本机。更严格 sandbox 下 verifier 用 `--dashboard-policy allow` 如实记录失败。
