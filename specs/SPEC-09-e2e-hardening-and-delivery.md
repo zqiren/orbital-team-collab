@@ -29,7 +29,7 @@ unlocks: []
 - 最终 repo 自包含且不依赖 Orbital runtime/API。
 - README 先讲产品差异和 demo，再链接深层研究。
 - replay 必须明确标注，不能替代 live proof。
-- 不提交真实 runtime、凭证、IM、agent transcripts 或用户路径。
+- 不提交真实 runtime、凭证、IM、agent transcripts 或用户路径；这些运行数据可留在本地 runtime 供 Dashboard 查看。
 
 # In Scope
 
@@ -47,7 +47,7 @@ unlocks: []
 
 - 新增未在 SPEC-00 冻结的旗舰功能。
 - 真实 IM connector、远程服务、SSO、预算、审批。
-- 推送 GitHub 或发送给 Kimi，除非用户另行明确授权。
+- GitHub checkpoint push 按 DECISIONS D10 的 standing authorization 执行；发送给 Kimi 仍需用户另行明确授权。
 - 隐藏失败测试或用 replay 冒充 live run。
 
 # Reviewer Journey
@@ -91,7 +91,7 @@ README 必须让评审者在以下层级获得信息：
 - SPEC-09 Done，所有 spec index 状态准确。
 - PROJECT_STATE 标记交付准备状态与任何仍需用户执行的外部动作。
 - INDEX 完整，DECISIONS/LESSONS 无矛盾。
-- 不擅自 commit/push/send；按用户授权执行最终 repo 操作。
+- 按 DECISIONS D10 commit/push；不得未经单独授权 send 给 Kimi/其他外部对象。
 
 ## Completion Record
 

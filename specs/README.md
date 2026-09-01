@@ -26,9 +26,9 @@
 
 | ID | 标题 | 阶段 | 状态 | 直接依赖 | 解锁 |
 |---|---|---|---|---|---|
-| [SPEC-00](SPEC-00-product-contract-and-architecture.md) | Product Contract & Architecture | Contract | Ready | — | SPEC-01 |
-| [SPEC-01](SPEC-01-file-runtime-kernel.md) | File Runtime Kernel | Runtime | Planned | SPEC-00 | SPEC-02, SPEC-06 |
-| [SPEC-02](SPEC-02-project-command-and-member-workflow.md) | `/project` Command & Member Workflow | Runtime | Planned | SPEC-01 | SPEC-03, SPEC-04 |
+| [SPEC-00](SPEC-00-product-contract-and-architecture.md) | Product Contract & Architecture | Contract | Done | — | SPEC-01 |
+| [SPEC-01](SPEC-01-file-runtime-kernel.md) | File Runtime Kernel | Runtime | Ready | SPEC-00 | SPEC-02, SPEC-06 |
+| [SPEC-02](SPEC-02-project-command-and-member-workflow.md) | `/team` Command & Member Workflow | Runtime | Planned | SPEC-01 | SPEC-03, SPEC-04 |
 | [SPEC-03](SPEC-03-member-skill-and-agent-adapters.md) | Member Skill & Agent Adapters | Agent UX | Planned | SPEC-02 | SPEC-08 |
 | [SPEC-04](SPEC-04-event-driven-manager-integration.md) | Event-driven Manager Integration | Manager | Planned | SPEC-02 | SPEC-05, SPEC-07 |
 | [SPEC-05](SPEC-05-manager-knowledge-compilation.md) | Manager Knowledge Compilation | Manager | Planned | SPEC-04 | SPEC-08 |
@@ -51,7 +51,9 @@ SPEC-00 → SPEC-01 → SPEC-02 → SPEC-04 → SPEC-05 ┐
 - 交付 repo 自包含；不依赖 Orbital 安装、daemon 或本地 API。
 - 文件是唯一事实来源；本地进程和界面只是文件协议的执行器或投影。
 - Manager 是角色，不绑定 Codex、Claude、Gemini 或其他 agent。
-- 成员通过 `/project <project-name> <task-id-or-query>` 原子完成任务匹配、认领和上下文加载。
+- 成员通过 `/team claim <project-name> <task-id-or-query>` 原子完成任务匹配、认领和上下文加载。
+- 成员必须显式 `/team start <task-id>` 后才能 report；不允许 `Claimed → Submitted`。
+- Git 版本化 durable project knowledge、配置、代码和 demo seed；协调 runtime 与 run/session logs 持久化在本机并由 Dashboard 读取，但不提交到 Git。
 - 工作系统包含 Confirmed Tasks、Potential Tasks 和 Open Questions 三类独立对象。
 - Potential Task 必须经 Promote 才能成为可领取的 Confirmed Task。
 - Blocking Open Question 会阻止任务被领取。

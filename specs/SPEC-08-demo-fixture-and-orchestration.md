@@ -54,7 +54,7 @@ unlocks: [SPEC-09]
 1. setup 创建临时 canonical project 与两个 worktree。
 2. dashboard 展示两个 Ready Tasks、一个 Manager 和初始 knowledge。
 3. fixture ingest 产生 Potential Task/Open Question，Manager/用户 triage。
-4. Alice `/project <name> <task>` 原子认领并工作。
+4. Alice `/team claim <name> <task>` 原子认领，`/team start <task>` 后工作。
 5. Bob 看到 Alice 的任务不可认领，选择第二项。
 6. 两人提交 commit/report。
 7. teamd 自动串行启动 Manager Runs。

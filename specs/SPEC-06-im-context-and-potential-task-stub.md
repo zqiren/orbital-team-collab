@@ -36,7 +36,7 @@ unlocks: [SPEC-07, SPEC-08]
 - extraction input/output contract。
 - 使用 Manager/Extraction Agent 或 deterministic fixture runner 生成 candidates。
 - Potential Task/Open Question 去重、置信度、证据引用。
-- triage/promote/dismiss/duplicate 命令的 storage 支持。
+- triage/promote/dismiss/duplicate/convert-to-question 命令的 storage 支持。
 - provider registry/stub 文档。
 
 # Out of Scope
@@ -62,7 +62,8 @@ teamctl potential list [--project <name>]
 teamctl potential promote <id>
 teamctl potential dismiss <id> --reason <text>
 teamctl potential duplicate <id> --of <id>
-teamctl question create/answer/defer/close ...
+teamctl potential question <id> --owner <actor> --question <text>
+teamctl question add/answer/defer/reopen/close ...
 ```
 
 Promote 必须原子创建 Confirmed Task 并回写 `promoted_task_id`。
@@ -73,7 +74,7 @@ Promote 必须原子创建 Confirmed Task 并回写 `promoted_task_id`。
 - extraction 产生至少一个 Potential Task 和一个 Open Question，均带 message evidence。
 - 重复 ingest 不生成重复 candidate。
 - Potential Task 不能被 member claim。
-- Promote 后生成 Draft/Ready 规则明确的 Confirmed Task，并可追溯来源。
+- Promote 后一律生成 Draft Confirmed Task 并可追溯来源；另一次显式 ready 校验必填项与 blocking question。
 - 未回答的 blocking question 会阻止关联 Task claim。
 - provider contract 足够让后续真实 IM 只新增 adapter，不改下游 schema。
 

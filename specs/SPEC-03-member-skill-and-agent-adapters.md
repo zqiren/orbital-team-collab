@@ -8,7 +8,7 @@ unlocks: [SPEC-08]
 
 # Outcome
 
-把 member CLI 封装为可复制、可由不同 agent 使用的协作能力；Claude Code 成员可用 `/project` 原生命令，其他 agent 可通过同一 Skill 协议或 CLI 获得等价行为。
+把 member CLI 封装为可复制、可由不同 agent 使用的协作能力；Claude Code 成员可用 `/team` 原生命令，其他 agent 可通过同一 Skill 协议或 CLI 获得等价行为。
 
 # Required Reading
 
@@ -18,12 +18,12 @@ unlocks: [SPEC-08]
 
 # Starting State
 
-- `teamctl project/report/block/status/questions` 已实现并验证。
+- `teamctl claim/report/block/status/questions` 已实现并验证。
 - Context Pack 和稳定错误语义可用。
 
 # Frozen Decisions
 
-- `/project` 是产品级行为协议，不要求所有 agent 具备相同 UI 实现。
+- `/team` 是产品级行为协议，不要求所有 agent 具备相同 UI 实现。
 - Skill 教 agent 遵守协议；CLI 执行确定性状态变化。
 - Hook 只负责加载/提醒，不负责认领、report 或 merge。
 - demo 优先支持 Claude Code 成员窗口；Manager agent 类型不受此限制。
@@ -32,12 +32,14 @@ unlocks: [SPEC-08]
 
 - `orbital-team-member` Skill 及必要 supporting references/scripts。
 - Claude Code 项目级 Skill/Plugin adapter，暴露：
-  - `/project <project-name> <task-id-or-query>`；
-  - `/project report <task-id>`；
-  - `/project block <task-id> ...`；
-  - `/project status ...`；
-  - `/project questions <project-name>`。
+  - `/team claim <project-name> <task-id-or-query>`；
+  - `/team start <task-id>`；
+  - `/team report <task-id>`；
+  - `/team block <task-id> ...`；
+  - `/team status ...`；
+  - `/team questions <project-name>`。
 - SessionStart context summary hook；不得自动 claim。
+- SessionStart 注册本地 member run；adapter 若能取得 provider session ID、transcript/log path 或 lifecycle event，则持续回写 runtime `runs/`，否则至少记录 actor、agent type、started/last-seen time 和 task/branch 关联。
 - agent-neutral install/link mechanism。
 - identity selection 与成员配置。
 - Skill 触发、参数解析和失败提示测试。
@@ -65,15 +67,17 @@ Skill 必须要求成员：
 
 - adapter 将用户输入稳定转换到 `teamctl`，不得复制状态机逻辑。
 - SessionStart 输出只含项目摘要、身份、当前领取任务、待回答问题和入口提示，并有严格长度上限。
+- run/session 记录只写用户私有的 local runtime，不提交 Git；adapter 不得伪造 provider 未暴露的完整 transcript。
 - 安装脚本支持从交付 repo 内的 canonical skill 位置创建复制或链接；行为明确可回滚。
 - agent 不支持 slash 时，文档给出自然语言和 CLI 等价入口。
 
 # Acceptance Criteria
 
-- 新 Claude Code session 能发现 `/project`。
-- `/project Apollo ISSUE-001` 调用已有原子 claim，不是仅生成提示文本。
+- 新 Claude Code session 能发现 `/team`。
+- `/team claim Apollo apollo-T-0001` 调用已有原子 claim，不是仅生成提示文本。
 - SessionStart 能显示最新 project/member 摘要但不改变 Task。
-- report 命令能完成 SPEC-02 的同一状态转换。
+- Team Dashboard 能看到 member run 的基础状态；支持的 adapter 还能打开其本地 transcript/log，未支持时明确显示 unavailable。
+- start/report 命令能完成 SPEC-02 的同一状态转换，并拒绝跳过 start 的 Report。
 - Skill 中没有将 Manager 固定为 Codex 或其他 agent。
 - 不安装 Skill 时 CLI 仍可独立工作。
 

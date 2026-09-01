@@ -1,7 +1,7 @@
 ---
 id: SPEC-00
 title: Product Contract & Architecture
-status: Ready
+status: Done
 depends_on: []
 unlocks: [SPEC-01]
 ---
@@ -40,8 +40,8 @@ Gate checks：
 2. Manager/Member 是角色，与 agent 类型正交。
 3. repo 架构支持多个 logical projects，demo 只使用一个。
 4. 最终 Git runtime 位于 shared git common dir 的 `orbital-team/` 子目录；seed 位于版本化的 `demo/seed/`。
-5. `/project` 是产品级命令协议；支持原生 slash 的 adapter 提供 slash command，其他 agent 使用 Skill 或 `teamctl` 等价入口。
-6. `/project <project-name> <task-id-or-query>` 唯一匹配时原子认领并返回 context；歧义时不认领。
+5. `/team` 是产品级命令协议；支持原生 slash 的 adapter 提供 slash command，其他 agent 使用 Skill 或 `teamctl` 等价入口。
+6. `/team claim <project-name> <task-id-or-query>` 唯一匹配时原子认领并返回 context；歧义时不认领。
 7. Confirmed Tasks、Potential Tasks、Open Questions 是独立存储。
 8. Potential Task 只有 Promote 后才能进入 Confirmed Tasks。
 9. Blocking Open Question 阻止 Confirmed Task 被领取。
@@ -59,7 +59,7 @@ Gate checks：
   - 三类工作对象 schema；
   - Report、Event、Integration Job、Knowledge Proposal schema；
   - 状态机和合法转换；
-  - `/project` 命令语法与解析规则；
+  - `/team` 命令语法与解析规则；
   - file locking、atomic write、idempotency 基线；
   - `teamd` 与 `ManagerRunner` contract；
   - Manager 自动权限与禁止动作；
@@ -96,6 +96,8 @@ orbital/INDEX.md
 orbital/instructions/
 ```
 
+这里还包括 repo 内的产品代码、配置和 `demo/seed/`。它们构成 git-native durable layer：评审者可以看到 Orbital 编译出的项目学习，并在 clean clone 后从 seed 初始化一个可运行 workspace。
+
 运行时根目录（Git 初始化后）：
 
 ```text
@@ -113,8 +115,11 @@ orbital/instructions/
     ├── reports/
     ├── integrations/
     ├── knowledge-packs/
-    └── knowledge-proposals/
+    ├── knowledge-proposals/
+    └── runs/                 # 本地 Manager/member run metadata、stdout/stderr 与可选 transcript
 ```
+
+该 runtime 是 file-native local persistent layer：跨进程/重启保留并由 Team Dashboard 读取，但不进入 Git。runtime 使用当前用户私有权限，Dashboard 默认仅监听 loopback；涉及 session/transcript 的内容默认本地私有。Team Cloud 同步、团队访问控制和保留策略属于 roadmap，不伪装成 v1 已具备的跨机器协作。
 
 ## Core Flow
 
@@ -159,7 +164,7 @@ Open → Deferred → Open/Closed
 
 - `report.submitted` 只在 report 和 Task Submitted 状态均持久化成功后写入。
 - `teamd` 将事件转成有 idempotency key 的 Integration Job。
-- 每个 project 同时最多一个 active integration job。
+- 每个 project 同时最多一个占用 integration slot 的 Job；`Queued`、`Running`、`Retryable` 占用，`Merged`、`Awaiting Knowledge`、`Changes Requested`、`Blocked`、`Done` 不占用。
 - Runner contract 至少包含 `workspace`、`project`、`job_id`、`report_id`、Manager Skill 路径和允许命令。
 - merge 成功后才进入 Knowledge Compilation；失败不得修改 canonical knowledge。
 - Run 崩溃后可重试，已完成 report 不得重复 merge/apply。
@@ -175,28 +180,29 @@ Open → Deferred → Open/Closed
 至少冻结：
 
 ```text
-/project <project-name> <task-id-or-query>
-/project report <task-id>
-/project block <task-id> [reason]
-/project status [task-id]
-/project questions <project-name>
-/project manager inbox
+/team claim <project-name> <task-id-or-query>
+/team start <task-id>
+/team report <task-id>
+/team block <task-id> [reason]
+/team status [task-id]
+/team questions <project-name>
+/team manager inbox
 ```
 
 同时定义等价 `teamctl` 调用、唯一匹配/歧义/已被领取/被问题阻塞时的响应。
 
-# Design Review Notes (2026-09-01)
+# Resolved Design Review Decisions (2026-09-01)
 
-执行本 spec 时，以下审查发现的 open questions 必须在交付文档中给出明确答案（除第 1 条外均为契约级细节，执行 session 可自行裁决并记录）：
+用户已确认第 1、4 项，其余采用建议默认值。执行本 spec 时须把以下答案写入交付文档，不再作为 open questions 重做设计：
 
-1. **「git-native」叙事 vs runtime 不进 git**：任务/事件 runtime 位于 `<git-common-dir>/orbital-team/`，不版本化、不随 clone/push 传播。单机多 worktree 成立，但产品主线是「git 化项目状态」。`docs/21-architecture.md` 必须正面回答分层：版本化知识（`orbital/*.md`）是 git-native 层；协调 runtime 是本地 ephemeral 层；跨机器同步是 roadmap 项（写入 `docs/30-roadmap.md`），否则评审第一问就会命中此处。
-2. **"active integration job" 的定义**：`Awaiting Knowledge` 是否算 active？决定知识编译挂起/失败时后续 report 是否被阻塞。同时补全恢复路径：knowledge 因事实冲突转 Open Question 后 Task 停在什么状态、question answered 后由什么事件恢复 pipeline（当前事件链没有 `question.answered → resume` 路径）。
-3. **Task ID 唯一性范围**：`teamctl task start <task-id>`、`/project status [task-id]` 不带 project 参数，隐含 task ID 跨 project 全局唯一。冻结 ID 生成规则（建议 project-prefixed）。
-4. **`/project` 保留字**：`<project-name>` 参数位与 `report|block|status|questions|manager` 子命令冲突。冻结保留字清单与解析优先级。
-5. **Knowledge change summary schema**：SPEC-07（dashboard 消费方）不依赖 SPEC-05（生产方），可能先行实现。该 schema 必须在本 spec 冻结，否则两个 session 会各自发明格式。
-6. **Dashboard 写操作的 actor 身份**：events 要求 actor 字段；UI 添加 Task/回答 question 时的 actor 标识规则需冻结。
-7. **Promote 后的初始状态**：统一规则建议 promote → Draft，满足必填项且无 blocking question 才可置 Ready（与 SPEC-07 Write Semantics 对齐）。
-8. **Claimed 直接 report 是否合法**：状态机允许 `Claimed → Submitted` 跳过 `In Progress`，还是必须先 `task start`？逐条转换表中明确。
+1. **Git-native 与 local runtime 分层**：版本化层包含 durable knowledge、配置、代码和 demo seed，用于审查学习成果与 clean clone；tasks/events/reports/jobs/run/session logs 是持久化的本地 runtime，由 Dashboard 读取但不提交。Team Cloud 的同步、权限和 retention 进入 `docs/30-roadmap.md`。
+2. **Integration slot 与恢复**：仅 `Queued`、`Running`、`Retryable` 占用 slot；`Awaiting Knowledge` 不阻塞后续 report。知识冲突时 Task 保持 `Integrating`，Open Question 记录 job/proposal 关联；`question.answered` 发出 `knowledge.resume_requested`，新的短生命周期 Manager Run 重新校验文件哈希，必要时重编 proposal 后继续。
+3. **Task ID 唯一性**：使用 `<project-slug>-T-<zero-padded-sequence>`，project slug 保证 registry 内唯一，因此 Task ID 跨 workspace 全局唯一；命令仍可用 project 做额外一致性校验。
+4. **命令语法**：入口改为 `/team`，所有操作使用显式动词；claim 固定为 `/team claim <project-name> <task-id-or-query>`，不存在 project-name/subcommand 参数位冲突。
+5. **Knowledge change summary schema**：冻结字段 `schema_version`、`summary_id`、`project_slug`、`job_id`、`report_id`、`proposal_id`、`actor`、`applied_at`、`source_commit`、`changes[]`；每个 change 含 `path`、`operation`（created/updated/deleted/moved）、`category`（state/decision/lesson/index/instruction/other）、`summary`，move 另含 `from_path`。SPEC-05 生产、SPEC-07 只读消费同一 schema。
+6. **Dashboard actor**：server 启动时必须显式绑定已登记的 `human:<member-id>`，写请求继承 server actor 且不能由浏览器 payload 覆盖；自动事件分别使用 `member:<id>`、`manager:<id>` 或 `system:teamd`。UI 显示当前 actor，缺失或未知 actor 时只读启动。
+7. **Promote 初始状态**：promote 一律原子生成 Draft 并保留 evidence/source；另一次显式 validate/ready 转换检查必填项和 blocking question，不自动 Ready。
+8. **Report 前置状态**：`Claimed → Submitted` 非法；成员必须先用 `/team start <task-id>`（等价 `teamctl task start`）进入 `In Progress`，只有 assignee 可从 `In Progress` report 到 `Submitted`。
 
 # Deliverables
 
@@ -211,7 +217,7 @@ Open → Deferred → Open/Closed
 
 - 新 session 只读交付文档即可准确回答：谁能写什么、三类工作对象如何转换、report 如何触发 Manager、失败如何恢复。
 - 每个状态转换都有 actor、precondition 和 event。
-- `/project` 在唯一匹配时的 claim 是原子操作，歧义时不改变状态。
+- `/team claim` 在唯一匹配时的 claim 是原子操作，歧义时不改变状态。
 - 文档明确 Manager agent-agnostic，且 v1 runner 为事件触发的新 run。
 - 文档明确文件是唯一事实来源，UI/daemon/agent session 都不是隐藏事实源。
 - 后续 SPEC-01 不需要新增产品决策即可实现 runtime kernel。
@@ -233,14 +239,14 @@ Open → Deferred → Open/Closed
 
 ## Completion Record
 
-- Final status: —
-- Outcome achieved:
-- Files changed:
-- Verification run:
-- Verification result:
-- Deviations from spec:
-- Decisions recorded:
-- Lessons recorded:
-- Known limitations:
-- Working tree / commit:
-- Next spec readiness:
+- Final status: Done
+- Outcome achieved: 冻结 Team Workspace 的产品范围、两层文件模型、角色/权限、Git common-dir runtime、schema、状态机、`/team`/`teamctl`、event-driven Manager、knowledge Git 闭环、Dashboard/IM boundary 与 SPEC-01～09 路线。
+- Files changed: 新增 `docs/20-prd.md`、`docs/21-architecture.md`、`docs/22-protocol.md`、`docs/30-roadmap.md`、`schemas/README.md`、`schemas/v1/orbital-team.schema.json`；同步校准上游 docs、SPEC-01～09、Spec Index 与 Orbital memory。
+- Verification run: Python `json` + `jsonschema.Draft202012Validator` 校验 schema、13 个命名 JSON 示例、Project/四类 Store/ManagerRunner I/O 与非法 actor；`rg` 扫描凭证/用户路径、旧 `/project`/“Codex Manager”绑定及 integration event 语义；`git diff --check`；Git gate。
+- Verification result: 全部通过；48 个 `$defs`、13 个 JSON 示例有效，三份核心文档术语与 Markdown fence 一致，未发现交付隐私数据、旧接口或空白字符错误。
+- Deviations from spec: 无范围偏离；按 spec 允许新增直接消费的 schema bundle。为落实禁止 `Claimed → Submitted` 补齐 `/team start`；契约审计补齐受控 git mutation lock、独立 local knowledge commit/no-change summary 与 `integration.merged`/`integration.completed` 分义。
+- Decisions recorded: D12（Python 3.11 + JSON Schema/filelock + 无 Node/DB Dashboard 边界）；D13（durable knowledge commit、clean workspace 与受控 Git mutation）。
+- Lessons recorded: zsh 的 `path` 是特殊参数，验证脚本不得用作循环变量。
+- Known limitations: v1 是单机/单 OS 用户信任边界；跨机器 runtime/权限/retention 属于 Team Cloud；完整 transcript 取决于 runner/adapter；非 POSIX 权限边界需在实现期验证。
+- Working tree / commit: 内容与验证均完成，但当前 sandbox 禁止创建 `.git/index.lock`，且执行环境无法解析 `github.com`，因此 checkpoint 尚未 commit/push；本机终端执行 `git add -A && git commit -m "docs: freeze Team Workspace product contract" && git push -u origin main` 即可完成。standing authorization 见 DECISIONS D10。
+- Next spec readiness: SPEC-01 已 Ready；可仅依赖本 Completion Record、四份交付文档与 schema bundle 实现 File Runtime Kernel。

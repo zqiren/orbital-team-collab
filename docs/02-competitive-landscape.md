@@ -60,6 +60,8 @@
 3. **跨异构 agent 的统一预算与审批**：Devin/Cursor/Fleet 都做了"钱"的团队维度，但都绑定自家用量计量。
 4. **跨人、跨机器、跨 session 的持久任务队列**：Claude Code agent teams 明文 "never uploaded"、"no project-level equivalent of the team config"。
 
+> 设计收敛说明：上面描述的是机会空间，不等于 v1 把所有运行态直接提交到 Git。当前方案只版本化经 Manager 编译的 durable knowledge/config/code；tasks、events、reports、jobs 和 run/session logs 留在本地 runtime，由 Team Dashboard 读取。跨机器 runtime 共享是 Team Cloud roadmap，避免把 Git 误用成高频协调数据库。
+
 **最接近的三个身影**（答辩时要主动提）：GitHub Copilot 多 agent 控制面（巨头 + 已纳第三方 agent）、Devin Outposts（架构同形）、OpenHands Agent Canvas（team-shared Agent Server，OSS 最接近）。但三者分别缺：运营面深度 / 异构性 / 治理产品化。
 
 ## 5. 威胁与时间窗

@@ -8,7 +8,7 @@ unlocks: [SPEC-08]
 
 # Outcome
 
-在 integration 成功后，由同一个事件驱动 Manager Run 把成员报告和 merged diff 编译成受验证的 Knowledge Proposal，并安全更新 PROJECT_STATE、DECISIONS、LESSONS、INDEX。
+在 integration 成功后，由同一条事件驱动 pipeline（正常路径可复用当前 run，恢复路径启动新的短生命周期 Manager Run）把成员报告和 merged diff 编译成受验证的 Knowledge Proposal，并安全更新 PROJECT_STATE、DECISIONS、LESSONS、INDEX。
 
 # Required Reading
 
@@ -19,7 +19,7 @@ unlocks: [SPEC-08]
 
 # Starting State
 
-- `integration.completed`/Awaiting Knowledge 状态可用。
+- `integration.merged`/Awaiting Knowledge 状态可用。
 - ManagerRunner 可启动 agent 并返回结构化结果。
 - canonical memory 文件存在。
 
@@ -30,14 +30,16 @@ unlocks: [SPEC-08]
 - merge 失败不得 apply knowledge。
 - 事实冲突或缺失决策创建 Open Question，不静默覆盖。
 - 每份 proposal 只能 apply 一次。
+- Awaiting Knowledge 不占用 integration slot；冲突问题回答后由 `knowledge.resume_requested` 恢复。
 
 # In Scope
 
 - `orbital-team-manager` Skill 的 knowledge rules。
 - Knowledge Pack builder。
 - Knowledge Proposal 格式与状态。
-- proposal diff/patch 生成、验证和 apply。
+- proposal diff/patch 生成、验证、apply 和 allowlisted local knowledge commit。
 - PROJECT_STATE/DECISIONS/LESSONS/INDEX 专属校验规则。
+- v1 自动 apply allowlist 只包含上述四个文件；`orbital/instructions/` 可读但不可由 Manager 自动修改。
 - integration → knowledge 事件链、retry 与 idempotency。
 - knowledge change summary 给 dashboard。
 
@@ -59,7 +61,7 @@ unlocks: [SPEC-08]
 # Pipeline
 
 ```text
-integration.completed
+integration.merged
 → knowledge.prepare <report-id>
 → Knowledge Pack
 → Manager semantic compile
@@ -72,6 +74,10 @@ integration.completed
 
 apply 前记录原文件哈希；若文件已变化，proposal 进入 Stale/Blocked 并重新编译，不覆盖并发更新。
 
+实际 memory apply/commit 复用 SPEC-04 的 git mutation lock；Runner 不能直接执行裸 `git commit`，只能提交结构化 Proposal 给受控 domain command。
+
+知识冲突创建的 Open Question 必须关联 job/proposal；Task 保持 Integrating。`question.answered` 产生 `knowledge.resume_requested`，恢复 run 重新校验 proposal 基线并在必要时重编。成功 summary 使用 `docs/22-protocol.md` 冻结的 knowledge change summary schema。
+
 # Acceptance Criteria
 
 - 两个成员报告能收敛成不重复、不矛盾的 canonical memory。
@@ -81,6 +87,7 @@ apply 前记录原文件哈希；若文件已变化，proposal 进入 Stale/Bloc
 - 输入与已有 DECISIONS 冲突时创建 Open Question 或显式 supersede。
 - 文件在 proposal 后被修改会阻止旧 proposal apply。
 - 成功 apply 后 Task 与 Integration Job 才最终进入 Done。
+- knowledge change 只 stage allowlisted memory path 并生成独立本地 commit；no-change 不生成空 commit；绝不 remote push。
 - knowledge change summary 可被 dashboard 读取。
 
 # Verification

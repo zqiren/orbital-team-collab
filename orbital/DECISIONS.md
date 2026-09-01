@@ -19,8 +19,8 @@ Chosen: docs/00 简报、01 Orbital 现状、02 竞品综合、10 场景、11 �
 Reason: 规划文档与原始证据分层，评审可读、论据可溯。
 
 ## D5 — 核心立论（作业主线） <!--mem id:d5 created:2026-09-01 touched:2026-09-01-->
-Chosen: Team Feature = Orbital「project as unit」逻辑的自然延伸：session→project（已完成）→ team（下一步）；抓手 = 所有项目状态是本地纯文本文件，天然 git 化。
-Reason: README 实证 Orbital roadmap 无任何团队字样（单人假设），且竞品 Claude Code/Codex 同样卡在单人假设——这是「定位雷同」质疑的正面解法。
+Chosen: Team Feature = Orbital「project as unit」逻辑的自然延伸：session→project（已完成）→ team（下一步）。产品采用两层文件模型：经 Manager 编译的 durable project knowledge、配置、代码和 demo seed 进入 Git，展示 Orbital 学到了什么并随 clone 传播；tasks、events、reports、integration jobs 和本地 run/session logs 是持久化但不版本化的 local runtime，由 Team Dashboard 读取，未来由 Team Cloud 跨机器同步。
+Reason: README 实证 Orbital roadmap 无任何团队字样（单人假设），且竞品 Claude Code/Codex 同样卡在单人假设——这是「定位雷同」质疑的正面解法。分层后同时满足 clean clone 可运行、项目学习可审查，以及本地运行数据持久可观测且不污染 Git/泄漏隐私。
 Rejected: 把 team feature 讲成功能堆砌清单（不构成差异化叙事）。
 
 ## D6 — demo 运行边界
@@ -34,14 +34,29 @@ Reason: 任意 agent 都能担当 Manager，且不依赖向某个长期交互窗
 Rejected: 固定 Codex 为 Manager；等待用户提醒 Manager 检查 inbox；把长期 agent session 作为事实来源。
 
 ## D8 — 工作对象与成员入口
-Chosen: 分离 Confirmed Tasks、Potential Tasks、Open Questions；`/project <project-name> <task-id-or-query>` 唯一匹配时原子认领并返回上下文，Potential Task 必须 Promote，blocking Open Question 阻止 claim。
+Chosen: 分离 Confirmed Tasks、Potential Tasks、Open Questions；`/team claim <project-name> <task-id-or-query>` 唯一匹配时原子认领并返回上下文，Potential Task 必须 Promote，blocking Open Question 阻止 claim。
 Reason: 执行承诺、IM 提取出的候选和待澄清问题有不同生命周期；分离后才能避免 agent 抢占未确认工作或在关键问题缺失时猜测。
 
 ## D9 — 跨 session spec 执行
 Chosen: 实现拆为 SPEC-00～SPEC-09，每个 spec 在单独 session 完成；handoff 使用 Spec Index + Completion Record + Orbital PROJECT_STATE/DECISIONS/LESSONS/INDEX。
 Reason: 每阶段保持单一可验收结果，并让新 session 无需聊天历史即可冷启动。
 
-## D10 — Git 提前初始化与 push 边界
-Chosen: 2026-09-01 应用户要求在工作区根目录提前完成 `git init`（main 分支）+ remote `origin` = https://github.com/zqiren/orbital-team-collab.git（远端为空仓库，已验证可达）；本地 git identity 用 zqiren / zqzqzqr0@gmail.com（个人 GitHub，不用全局 tencent.com 邮箱）。`.gitignore` 排除 `orbital-src/`（55MB 只读快照）与 orbital 机器管理运行时（sessions/ledger/tool-results/output/queue/approval_history/sub_agents 的 jsonl 与 .latest）；`orbital/*.md`、instructions/、skills/、sub_agents MEMORY.md 版本化。每个 spec 完成可做本地 checkpoint commit；任何 push 仍需用户单独授权。
-Reason: 用户 2026-09-01 明确要求 setup git；SPEC-00/01 原「git init 由 SPEC-01 执行、不建 remote」的假设由此被取代（两份 spec 文本已同步更新）。
-Rejected: 等 SPEC-01 再 init（用户要求提前）；提交 orbital 运行时数据（违反 SPEC-09 交付原则）。
+## D10 — Git checkpoint 与 push 策略
+Chosen: 2026-09-01 应用户要求在工作区根目录完成 `git init`（main 分支）+ remote `origin` = https://github.com/zqiren/orbital-team-collab.git；本地 git identity 用 zqiren / zqzqzqr0@gmail.com（个人 GitHub，不用全局 tencent.com 邮箱）。`.gitignore` 排除 `orbital-src/`（55MB 只读快照）与 orbital 机器管理运行时（sessions/ledger/tool-results/output/queue/approval_history/sub_agents 的 jsonl 与 .latest）；`orbital/*.md`、instructions/、skills/、sub_agents MEMORY.md 版本化。用户已给出 standing authorization：每个 spec 完成并验证后做一次 checkpoint commit，并立即 push 到 `origin/main`；发送给 Kimi 或其他外部对象仍需单独授权。
+Reason: 用户 2026-09-01 明确要求 setup git，并在 SPEC-00 完成后明确要求“commit 然后 push，每一次完成之后都 commit 和 push 一次”。
+Rejected: 等 SPEC-01 再 init；每次 spec push 都重复询问；提交 orbital 运行时数据；未经授权向 Kimi/其他人发送交付物。
+
+## D11 — SPEC-00 design review 收敛
+Chosen: 2026-09-01 用户确认两层文件模型并将产品入口改为 `/team`；其余契约项采用建议默认值：仅 `Queued`、`Running`、`Retryable` Integration Job 占用 project integration slot，`Awaiting Knowledge` 不阻塞后续代码集成；`question.answered` 触发 `knowledge.resume_requested`，恢复时重新校验 proposal 基线；Task ID 使用全局唯一的 `<project-slug>-T-<sequence>`；slash grammar 使用显式动词 `/team claim|report|block|status|questions|manager`；knowledge change summary 使用 SPEC-00 冻结的单一 schema；Dashboard 启动时绑定 `human:<member-id>` actor 且写请求不能冒充其他 actor，默认仅监听 loopback 并以用户私有权限保存敏感 run/session logs；Potential Task promote 后一律进入 Draft，显式校验后才可 Ready；`Claimed → Submitted` 非法，必须先进入 In Progress。
+Reason: 消除命令歧义、跨 project ID 歧义和 integration head-of-line blocking，并让 dashboard、knowledge producer 与后续独立 spec 有共同契约。
+Rejected: 把本地 runtime/session logs 提交到 Git；继续使用歧义的 `/project <project-or-subcommand>` 语法；让 Awaiting Knowledge 独占 integration slot；promote 自动 Ready；允许未 start 直接 report。
+
+## D12 — 原型实现技术边界
+Chosen: Team Workspace runtime、domain、`teamctl`、`teamd` 和本地 Dashboard adapter 统一使用 Python 3.11+；规范数据采用 JSON Schema Draft 2020-12，锁定 `jsonschema >=4,<5` 与 `filelock >=3,<4` 两个核心依赖。Dashboard 使用 Python loopback server + repo 内静态 HTML/CSS/ES modules，不引入数据库、Node 构建链或第二套状态逻辑。`integration.merged` 表示代码已合并并触发 knowledge pipeline；`integration.completed` 只在 knowledge applied 且 Task/Job Done 后发出。
+Reason: 单一 domain/storage package 能让 CLI、daemon、Dashboard 和 adapter 复用状态机；低依赖更适合 clean-clone 作业。拆分 merged/completed 避免 Dashboard 和恢复逻辑把“代码已合并、知识仍挂起”误报为完整完成。
+Rejected: Python/Node 双 runtime 业务层；React/Vite + 独立 API 数据库；让 agent 或前端直接写 JSON；代码 merge 后提前发 `integration.completed`。
+
+## D13 — Durable knowledge 的 Git 闭环
+Chosen: Knowledge Proposal apply 后只 stage allowlisted canonical memory path，并创建独立的本地 knowledge commit；Knowledge Change Summary 同时记录 source merge commit 与 knowledge commit。若 Manager 判断没有值得沉淀的变化，则生成 `changes=[]`、`knowledge_commit=null` 的 no-change summary，不创建空 commit。canonical workspace 存在 pipeline 外未提交改动时返回 `E_DIRTY_WORKSPACE` 并 Blocked；任何 knowledge commit 都不得 amend code merge 或 remote push。所有 merge/knowledge commit 只能经受控 domain command，在 project + git mutation lock 内重新校验 HEAD/binding；Runner 不获得裸 `git merge/commit/push` policy。
+Reason: 只有 commit 后 durable knowledge 才真的能随 clone/PR 传播；独立 commit 让代码 merge 与知识编译分别审查和恢复，并避免覆盖用户未提交工作。
+Rejected: 只修改工作树却宣称 git-native；amend 成员/code merge；自动提交无关工作树变化；创建空 knowledge commit；自动 push。

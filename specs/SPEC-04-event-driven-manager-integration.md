@@ -27,7 +27,7 @@ unlocks: [SPEC-05, SPEC-07]
 - Manager 是 project role，不绑定 agent 类型。
 - v1 每个 Report 触发新的短生命周期 Manager Run，不向长期窗口注入。
 - `teamd` 不保存隐藏业务状态；Job/Event/结果均在文件中。
-- 每 project 同时最多一个 active integration job。
+- 每 project 同时最多一个占用 integration slot 的 job；Queued/Running/Retryable 占用，Awaiting Knowledge 不占用。
 - merge 成功后才允许进入知识编译。
 
 # In Scope
@@ -35,6 +35,7 @@ unlocks: [SPEC-05, SPEC-07]
 - `teamd` event tail/watch 与 crash resume。
 - Integration Job store/state machine。
 - project-level manager lock。
+- project-level git mutation lock；Runner 只能调用受控 merge command，不能获得裸 `git merge/commit/push` policy。
 - `ManagerRunner` protocol 与 custom command runner。
 - 至少一个实际可验证的 agent runner adapter；其他 runner 可为 manifest/stub。
 - Manager integration prompt/brief 生成。
@@ -67,13 +68,13 @@ Any terminal result remains idempotent
 - 输入：`report.submitted`。
 - teamd 以 report ID 生成稳定 job idempotency key。
 - runner 结果写入 integration record，再发结果事件。
-- 成功：`integration.completed`，Task/Job 进入 awaiting knowledge 状态。
+- 成功：`integration.merged`，Job 先持久化 Merged 并释放 integration slot；Knowledge Pack 准备后进入 Awaiting Knowledge，Task 全程保持 Integrating。`integration.completed` 只在 knowledge applied、Task/Job Done 后发出。
 - 需修改：`integration.changes_requested`。
 - 风险/冲突：`integration.blocked`，必要时创建 Open Question。
 
 # ManagerRunner Contract
 
-输入至少包括：workspace、project slug、job/report IDs、Manager Skill/brief 路径、允许工具/命令、timeout。输出必须结构化说明 outcome、merge commit、validation、risk/open question 和日志位置。
+输入至少包括：workspace、project slug、job/report IDs、Manager Skill/brief 路径、允许工具/命令、timeout。输出必须结构化说明 outcome、merge commit、validation、risk/open question 和日志位置。本地 run metadata、stdout/stderr 与 runner 可提供的 transcript 持久化到用户私有的 runtime `runs/`，供 loopback Dashboard 查看但不得进入 Git。
 
 Runner 实现不得把 provider session 作为事实来源；重试必须重新从文件恢复。
 
@@ -90,7 +91,7 @@ Runner 实现不得把 provider session 作为事实来源；重试必须重新�
 - 同一 report 重放不会重复 merge。
 - runner crash 后 Job 可重试且状态一致。
 - 测试失败进入 Changes Requested/Blocked，不进入 Done。
-- merge 成功记录 merge commit，并发出 `integration.completed`。
+- merge 成功记录 merge commit，并发出 `integration.merged`；不得提前发出 `integration.completed`。
 - 替换 runner 配置不改变 Task/Report schema。
 
 # Verification

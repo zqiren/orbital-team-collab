@@ -9,6 +9,10 @@
 - docs/02-competitive-landscape.md — 竞品综合分析（综合 research/：雷同质疑反驳 + 团队维度对比表 + 四条空白）
 - docs/10-user-scenarios.md — 目标团队画像（A/B/C）与六个核心场景 + 优先级
 - docs/11-team-feature-directions.md — 方向池 F1-F7 + 优先级矩阵 + 旗舰组合（F1+F2+F3）与北极星
+- docs/20-prd.md — Team Workspace PRD：两层文件模型、角色、v1 范围、用户旅程、安全边界与成功指标
+- docs/21-architecture.md — Git common-dir runtime、transaction/recovery、Manager pipeline、knowledge commit、Dashboard/IM/Team Cloud 边界
+- docs/22-protocol.md — 规范对象、状态转换、`/team`/`teamctl`、ManagerRunner、错误码、事件与权限契约
+- docs/30-roadmap.md — SPEC-01～09 实现里程碑、验证风险、Prototype Done 与 Team Cloud/F2/F3 后续路线
 
 ## 系统与目标
 - orbital-src/ — Orbital 官方 main 源码快照（2026-09-01 tarball，只读参考，不进交付 repo）
@@ -16,15 +20,18 @@
 - AGENTS.md — Orbital 生成的子 agent 上手文件（项目记忆系统说明）
 
 ## 后续交付（规划中）
-- docs/20-prd.md、docs/21-architecture.md、docs/22-protocol.md、docs/30-roadmap.md — SPEC-00 将产出的产品、架构、文件协议与路线图契约
 - README 电梯陈述、可运行 demo — 按 SPEC-01～SPEC-09 分阶段交付
+
+## 规范 Schema（schemas/）
+- schemas/README.md — runtime 文件/对象与 JSON Schema `$defs` 的消费映射
+- schemas/v1/orbital-team.schema.json — Protocol 1.0 的 JSON Schema Draft 2020-12 bundle
 
 ## 实现规格（specs/）
 - specs/README.md — SPEC-00～SPEC-09 状态、依赖图、冻结原则与执行入口
 - specs/EXECUTION_PROTOCOL.md — 每个独立 session 的启动、验证、handoff 与 blocking 协议
 - specs/SPEC-00-product-contract-and-architecture.md — 冻结角色、数据、状态机、命令、事件与权限契约
 - specs/SPEC-01-file-runtime-kernel.md — Git common-dir 文件 runtime、原子存储、锁、事件与幂等
-- specs/SPEC-02-project-command-and-member-workflow.md — `/project` 原子认领、成员状态流转与结构化 Report
+- specs/SPEC-02-project-command-and-member-workflow.md — `/team claim` 原子认领、成员状态流转与结构化 Report
 - specs/SPEC-03-member-skill-and-agent-adapters.md — Member Skill、Claude slash/hook 与 agent-neutral fallback
 - specs/SPEC-04-event-driven-manager-integration.md — teamd、Integration Job、ManagerRunner 与自动代码集成
 - specs/SPEC-05-manager-knowledge-compilation.md — Manager Skill、Knowledge Pack/Proposal 与 canonical memory apply

@@ -51,4 +51,4 @@ demo/                      最小可演示原型（后置）
 |---|---|
 | 竞品迭代极快，知识过时 | 全部联网核实 + 标注来源日期；研究原文存 docs/research/ |
 | 「Team feature」含义两可：人与人的团队 vs agent 之间的团队 | 两个维度都分析，PRD 明确聚焦点 |
-| Orbital 单人设计（local-first 文件态）与多人共享存在张力 | 这是核心设计题而非缺陷——在方向池里正面回答（git-native 同步假设） |
+| Orbital 单人设计（local-first 文件态）与多人共享存在张力 | 用两层文件模型正面回答：durable knowledge/config 经 Git 传播，本地 runtime 支撑看板与日志；跨机器 runtime 同步进入 Team Cloud roadmap |

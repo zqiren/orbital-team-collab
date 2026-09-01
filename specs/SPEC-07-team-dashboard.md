@@ -29,6 +29,8 @@ unlocks: [SPEC-08]
 - Dashboard 的本地 server 是 storage adapter/UI host，不维护独立数据库。
 - 所有写操作复用和 `teamctl` 相同的 domain/storage 层。
 - Dashboard 可以添加 Tasks/Open Questions，并 triage Potential Tasks。
+- server 启动时绑定已登记的 `human:<member-id>` actor；未知 actor 时只读，浏览器请求不能覆盖 actor。
+- server 默认只监听 loopback；runtime 根目录使用当前用户私有权限。完整 transcript 仅在 runner/adapter 能提供时展示，并明确其本地敏感数据属性。
 
 # In Scope
 
@@ -39,6 +41,7 @@ unlocks: [SPEC-08]
 - Open Questions：新增、回答、defer、close、blocking、关联对象。
 - Activity Feed：claim/report/integration/knowledge events。
 - Pending Integrations 与 Manager status。
+- 本地 Manager/member run 记录、stdout/stderr 和可选 session transcript；明确标注仅本机持久化且不进入 Git。
 - Project Knowledge 最近变更摘要及文件链接/预览。
 - 文件变化刷新、空状态、损坏/锁/runner offline 错误状态。
 - UI/domain tests 和最小可访问性。
@@ -61,9 +64,10 @@ unlocks: [SPEC-08]
 # Write Semantics
 
 - Add Task 默认进入 Draft，只有满足必填项且无 blocking question 才可设 Ready。
-- Promote Potential Task 走 domain command，不能前端复制对象。
+- Promote Potential Task 走 domain command 并一律生成 Draft，不能前端复制对象或自动 Ready。
 - Answer blocking question 后，只解除阻塞条件；是否 Ready 仍按 Task 规则判断。
 - UI 对 claim/report/merge 主要展示，不冒充成员/Manager 身份执行高权限动作。
+- Knowledge view 只消费 SPEC-00 冻结的 knowledge change summary schema，不从 markdown diff 猜测第二套结构。
 
 # Acceptance Criteria
 

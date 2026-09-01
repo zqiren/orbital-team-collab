@@ -1,7 +1,7 @@
 ---
 id: SPEC-01
 title: File Runtime Kernel
-status: Planned
+status: Ready
 depends_on: [SPEC-00]
 unlocks: [SPEC-02, SPEC-06]
 ---
@@ -53,6 +53,7 @@ Gate checks：确认 SPEC-00 deliverables 存在且术语一致。
 - 优先使用 repo 内可运行、依赖最少的实现；新增依赖必须在决定中说明。
 - 写入采用 lock + temp file + atomic replace；不得原地截断 JSON。
 - JSONL 事件必须单行、带 event ID、project slug、actor、timestamp、schema version。
+- runtime 根目录和新建的敏感 run/session log 文件默认仅当前 OS 用户可读写；不得依赖进程 umask 恰好安全。
 - stale lock 行为明确且测试覆盖。
 - 从 manager workspace 和两个 worktree 解析出的 runtime root 必须相同。
 - `reset --runtime-only` 只删除精确解析出的 `orbital-team/` runtime，并要求显式确认参数或 demo marker；不得接受宽泛路径。
@@ -75,6 +76,7 @@ storage 模块至少提供：registry、project store、event append/read、lock
 - 中断写入不会破坏最后一个有效状态。
 - 重复 init 幂等且不覆盖已有数据。
 - runtime 不进入 `git status` 的版本化文件列表。
+- 权限测试确认其他 OS 用户默认不可读取 runtime/log 文件（平台不支持 POSIX mode 时明确记录等价边界）。
 
 # Verification
 

@@ -23,7 +23,7 @@
 
 ### S1 新成员第一天（对应画像 C）——「冷启动继承」
 - **现状**：新人读 wiki、问人、翻旧 PR，三天才能让 agent 干活不闯祸；新人的 agent 对项目历史一无所知。
-- **Team Feature 后**：clone 项目仓库 = 继承全部项目状态。新人（或新人的 agent）冷启动时，管理 agent 从 PROJECT_STATE / DECISIONS / LESSONS 组装完整上下文：干到哪、为什么这么决策、踩过什么坑。
+- **Team Feature 后**：clone 项目仓库 = 继承 durable project knowledge 与配置。新人（或新人的 agent）冷启动时，管理 agent 从 PROJECT_STATE / DECISIONS / LESSONS 组装上下文：干到哪、为什么这么决策、踩过什么坑；高频 runtime 在 v1 由本机 setup/seed 初始化，未来由 Team Cloud 同步。
 - **为什么只有 Orbital 能做**：状态天生就在项目文件夹里（docs/01 核心观察：纯文本 → git 化），不需要迁移任何黑盒数据。
 
 ### S2 混编战队（画像 A）——「按强项与成本路由的异构 worker 池」
@@ -42,11 +42,11 @@
 
 ### S5 人走了，项目还在（画像 C）——「交接即 git transfer」
 - **现状**：员工离职 = 项目上下文随他的 `~/.claude/` 一起蒸发；agent teams 的 task list "never uploaded"。
-- **Team Feature 后**：项目状态文件随 repo 归属转移，下一任（和下一任的 agent）无缝继续。队列里未完成的任务、决策的理由、踩坑记录全部保留。
+- **Team Feature 后**：durable knowledge 随 repo 归属转移；Team Cloud 阶段再让未完成队列和运行记录跨机器转移。v1 demo 只证明同机多 worktree 的任务连续性，不声称 clone 会带走本地 runtime。
 
 ### S6 夜里跑批，早上验收（画像 A/B）——「团队队列 + 触发器 + 分角色看板」
 - **现状**：Orbital 已有 triggers 与队列，但队列、看板、审批都是 owner 单人视角。
-- **Team Feature 后**：团队共享队列夜间排空；早上一屏看清：谁的项目跑了什么、花了多少、哪三项等人审批。管理层看预算，工程师看进度。
+- **Team Feature 后**：v1 在本机 Dashboard 共享队列并展示 agent 运行、进度和日志；Team Cloud 阶段扩展到跨机器汇总、预算和待审批视图。
 
 ## 3. 场景优先级
 
@@ -63,4 +63,4 @@
 
 - 不做「团队版聊天室」：协作对象是项目状态，不是人聊人。
 - 不先做 SSO/SCIM：那是跟随项（竞品全有），不是差异化；PRD 里仅作为 GA 前的企业清单。
-- 不把 team feature 做成云托管 IDE：local-first 是身份，git 是同步层而不是云数据库。
+- 不把 team feature 做成云托管 IDE：local-first 是身份；Git 同步 durable layer 而不是充当 runtime 数据库，后续 Team Cloud 只补齐跨机器协调层。

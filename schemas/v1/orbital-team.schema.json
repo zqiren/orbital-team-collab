@@ -1,0 +1,607 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orbital.local/schemas/v1/orbital-team.schema.json",
+  "title": "Orbital Team Workspace v1 contract bundle",
+  "description": "Use the named $defs fragment matching the runtime file or domain object.",
+  "oneOf": [
+    {"$ref": "#/$defs/registry"},
+    {"$ref": "#/$defs/project"},
+    {"$ref": "#/$defs/member"},
+    {"$ref": "#/$defs/memberStore"},
+    {"$ref": "#/$defs/task"},
+    {"$ref": "#/$defs/taskStore"},
+    {"$ref": "#/$defs/potentialTask"},
+    {"$ref": "#/$defs/potentialTaskStore"},
+    {"$ref": "#/$defs/openQuestion"},
+    {"$ref": "#/$defs/openQuestionStore"},
+    {"$ref": "#/$defs/report"},
+    {"$ref": "#/$defs/event"},
+    {"$ref": "#/$defs/integrationJob"},
+    {"$ref": "#/$defs/knowledgePack"},
+    {"$ref": "#/$defs/knowledgeProposal"},
+    {"$ref": "#/$defs/knowledgeChangeSummary"},
+    {"$ref": "#/$defs/runRecord"},
+    {"$ref": "#/$defs/managerRunRequest"},
+    {"$ref": "#/$defs/managerRunResult"},
+    {"$ref": "#/$defs/imMessage"},
+    {"$ref": "#/$defs/errorResponse"}
+  ],
+  "$defs": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nullableTimestamp": {
+      "oneOf": [
+        {"$ref": "#/$defs/timestamp"},
+        {"type": "null"}
+      ]
+    },
+    "actor": {
+      "type": "string",
+      "pattern": "^(human|member|manager):[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$|^system:(teamd|fixture)$"
+    },
+    "projectSlug": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,31}$"
+    },
+    "taskId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,31}-T-[0-9]{4,}$"
+    },
+    "potentialTaskId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,31}-P-[0-9]{4,}$"
+    },
+    "questionId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,31}-Q-[0-9]{4,}$"
+    },
+    "reportId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,31}-T-[0-9]{4,}-R-[0-9]{4,}$"
+    },
+    "jobId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,31}-J-[a-f0-9]{12}$"
+    },
+    "proposalId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,31}-J-[a-f0-9]{12}-KP-[0-9]{4,}$"
+    },
+    "summaryId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,31}-J-[a-f0-9]{12}-KP-[0-9]{4,}-KS-[0-9]{4,}$"
+    },
+    "uuid": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+    },
+    "runId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,31}-RUN-[a-f0-9-]{36}$"
+    },
+    "gitCommit": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40,64}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "nullableString": {
+      "oneOf": [
+        {"type": "string"},
+        {"type": "null"}
+      ]
+    },
+    "stringList": {
+      "type": "array",
+      "items": {"type": "string"},
+      "uniqueItems": true
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["active_manager_id", "allowed_worktree_roots", "canonical_workspace", "created_at", "display_name", "revision", "runner", "schema_version", "seed_provenance", "slug"],
+      "properties": {
+        "active_manager_id": {"type": "string", "minLength": 1, "maxLength": 64},
+        "allowed_worktree_roots": {"$ref": "#/$defs/stringList"},
+        "canonical_workspace": {"type": "string", "minLength": 1},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "display_name": {"type": "string", "minLength": 1, "maxLength": 80},
+        "revision": {"type": "integer", "minimum": 0},
+        "runner": {"type": "string", "minLength": 1, "maxLength": 64},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "seed_provenance": {"$ref": "#/$defs/nullableString"},
+        "slug": {"$ref": "#/$defs/projectSlug"}
+      }
+    },
+    "projectRegistration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["created_at", "display_name", "project_file", "slug"],
+      "properties": {
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "display_name": {"type": "string", "minLength": 1, "maxLength": 80},
+        "project_file": {"type": "string", "pattern": "^projects/[a-z][a-z0-9-]{1,31}/project[.]json$"},
+        "slug": {"$ref": "#/$defs/projectSlug"}
+      }
+    },
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projects", "revision", "schema_version"],
+      "properties": {
+        "projects": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/projectRegistration"}
+        },
+        "revision": {"type": "integer", "minimum": 0},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"}
+      }
+    },
+    "member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent_type", "branch", "id", "joined_at", "role", "worktree"],
+      "properties": {
+        "agent_type": {"type": "string", "minLength": 1, "maxLength": 64},
+        "branch": {"type": "string", "minLength": 1},
+        "id": {"type": "string", "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$"},
+        "joined_at": {"$ref": "#/$defs/timestamp"},
+        "role": {"enum": ["member", "manager"]},
+        "worktree": {"type": "string", "minLength": 1}
+      }
+    },
+    "memberStore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "project_slug", "revision", "schema_version"],
+      "properties": {
+        "items": {"type": "object", "additionalProperties": {"$ref": "#/$defs/member"}},
+        "project_slug": {"$ref": "#/$defs/projectSlug"},
+        "revision": {"type": "integer", "minimum": 0},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"}
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["acceptance_criteria", "assignee", "blocking_question_ids", "created_at", "created_by", "dependencies", "description", "id", "labels", "paths", "project_slug", "revision", "state", "title", "updated_at"],
+      "properties": {
+        "acceptance_criteria": {"$ref": "#/$defs/stringList"},
+        "assignee": {"$ref": "#/$defs/nullableString"},
+        "blocked_from": {"$ref": "#/$defs/nullableString"},
+        "blocking_question_ids": {"type": "array", "items": {"$ref": "#/$defs/questionId"}, "uniqueItems": true},
+        "branch": {"$ref": "#/$defs/nullableString"},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "created_by": {"$ref": "#/$defs/actor"},
+        "dependencies": {"type": "array", "items": {"$ref": "#/$defs/taskId"}, "uniqueItems": true},
+        "description": {"type": "string"},
+        "id": {"$ref": "#/$defs/taskId"},
+        "labels": {"$ref": "#/$defs/stringList"},
+        "paths": {"$ref": "#/$defs/stringList"},
+        "project_slug": {"$ref": "#/$defs/projectSlug"},
+        "revision": {"type": "integer", "minimum": 0},
+        "source_potential_task_id": {
+          "oneOf": [
+            {"$ref": "#/$defs/potentialTaskId"},
+            {"type": "null"}
+          ]
+        },
+        "state": {"enum": ["draft", "ready", "claimed", "in_progress", "submitted", "integrating", "changes_requested", "blocked", "done", "cancelled"]},
+        "title": {"type": "string", "minLength": 1, "maxLength": 200},
+        "updated_at": {"$ref": "#/$defs/timestamp"}
+      }
+    },
+    "taskStore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "project_slug", "revision", "schema_version"],
+      "properties": {
+        "items": {"type": "object", "additionalProperties": {"$ref": "#/$defs/task"}},
+        "project_slug": {"$ref": "#/$defs/projectSlug"},
+        "revision": {"type": "integer", "minimum": 0},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conversation_id", "message_id", "permalink", "provider", "quote"],
+      "properties": {
+        "conversation_id": {"type": "string", "minLength": 1},
+        "message_id": {"type": "string", "minLength": 1},
+        "permalink": {"$ref": "#/$defs/nullableString"},
+        "provider": {"type": "string", "minLength": 1},
+        "quote": {"type": "string", "minLength": 1, "maxLength": 2000}
+      }
+    },
+    "potentialTask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["confidence", "created_at", "created_by", "dedupe_key", "evidence", "id", "project_slug", "promoted_task_id", "revision", "state", "summary", "suggested_title"],
+      "properties": {
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "converted_question_id": {
+          "oneOf": [
+            {"$ref": "#/$defs/questionId"},
+            {"type": "null"}
+          ]
+        },
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "created_by": {"$ref": "#/$defs/actor"},
+        "dedupe_key": {"type": "string", "minLength": 1, "maxLength": 300},
+        "dismissal_reason": {"$ref": "#/$defs/nullableString"},
+        "duplicate_of": {"$ref": "#/$defs/nullableString"},
+        "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}, "minItems": 1},
+        "id": {"$ref": "#/$defs/potentialTaskId"},
+        "project_slug": {"$ref": "#/$defs/projectSlug"},
+        "promoted_task_id": {
+          "oneOf": [
+            {"$ref": "#/$defs/taskId"},
+            {"type": "null"}
+          ]
+        },
+        "revision": {"type": "integer", "minimum": 0},
+        "state": {"enum": ["new", "triaged", "promoted", "dismissed", "duplicate"]},
+        "summary": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "suggested_title": {"type": "string", "minLength": 1, "maxLength": 200},
+        "triage_note": {"$ref": "#/$defs/nullableString"}
+      }
+    },
+    "potentialTaskStore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "project_slug", "revision", "schema_version"],
+      "properties": {
+        "items": {"type": "object", "additionalProperties": {"$ref": "#/$defs/potentialTask"}},
+        "project_slug": {"$ref": "#/$defs/projectSlug"},
+        "revision": {"type": "integer", "minimum": 0},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"}
+      }
+    },
+    "relatedRefs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["job_ids", "potential_task_ids", "proposal_ids", "task_ids"],
+      "properties": {
+        "job_ids": {"type": "array", "items": {"$ref": "#/$defs/jobId"}, "uniqueItems": true},
+        "potential_task_ids": {"type": "array", "items": {"$ref": "#/$defs/potentialTaskId"}, "uniqueItems": true},
+        "proposal_ids": {"type": "array", "items": {"$ref": "#/$defs/proposalId"}, "uniqueItems": true},
+        "task_ids": {"type": "array", "items": {"$ref": "#/$defs/taskId"}, "uniqueItems": true}
+      }
+    },
+    "openQuestion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["answer", "blocking", "created_at", "created_by", "evidence", "id", "owner", "project_slug", "question", "related", "revision", "state"],
+      "properties": {
+        "answer": {"$ref": "#/$defs/nullableString"},
+        "blocking": {"type": "boolean"},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "created_by": {"$ref": "#/$defs/actor"},
+        "deferred_until": {"$ref": "#/$defs/nullableTimestamp"},
+        "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}},
+        "id": {"$ref": "#/$defs/questionId"},
+        "owner": {"$ref": "#/$defs/actor"},
+        "project_slug": {"$ref": "#/$defs/projectSlug"},
+        "question": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "related": {"$ref": "#/$defs/relatedRefs"},
+        "revision": {"type": "integer", "minimum": 0},
+        "state": {"enum": ["open", "answered", "deferred", "closed"]}
+      }
+    },
+    "openQuestionStore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "project_slug", "revision", "schema_version"],
+      "properties": {
+        "items": {"type": "object", "additionalProperties": {"$ref": "#/$defs/openQuestion"}},
+        "project_slug": {"$ref": "#/$defs/projectSlug"},
+        "revision": {"type": "integer", "minimum": 0},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"}
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "outcome", "summary"],
+      "properties": {
+        "command": {"type": "string", "minLength": 1},
+        "outcome": {"enum": ["passed", "failed", "skipped"]},
+        "summary": {"type": "string"}
+      }
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_commit", "branch", "changed_files", "commit", "diff_summary", "id", "knowledge_candidates", "project_slug", "risks", "submitted_at", "submitted_by", "summary", "task_id", "validation"],
+      "properties": {
+        "base_commit": {"$ref": "#/$defs/gitCommit"},
+        "branch": {"type": "string", "minLength": 1},
+        "changed_files": {"$ref": "#/$defs/stringList"},
+        "commit": {"$ref": "#/$defs/gitCommit"},
+        "diff_summary": {"type": "string", "minLength": 1},
+        "id": {"$ref": "#/$defs/reportId"},
+        "knowledge_candidates": {"$ref": "#/$defs/stringList"},
+        "project_slug": {"$ref": "#/$defs/projectSlug"},
+        "risks": {"$ref": "#/$defs/stringList"},
+        "submitted_at": {"$ref": "#/$defs/timestamp"},
+        "submitted_by": {"$ref": "#/$defs/actor"},
+        "summary": {"type": "string", "minLength": 1},
+        "task_id": {"$ref": "#/$defs/taskId"},
+        "validation": {"type": "array", "items": {"$ref": "#/$defs/validation"}}
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor", "data", "id", "idempotency_key", "project_slug", "schema_version", "timestamp", "type"],
+      "properties": {
+        "actor": {"$ref": "#/$defs/actor"},
+        "data": {"type": "object"},
+        "id": {"$ref": "#/$defs/uuid"},
+        "idempotency_key": {"type": "string", "minLength": 1, "maxLength": 300},
+        "project_slug": {"$ref": "#/$defs/projectSlug"},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "timestamp": {"$ref": "#/$defs/timestamp"},
+        "type": {"type": "string", "pattern": "^[a-z][a-z0-9_]*[.][a-z][a-z0-9_]*$"}
+      }
+    },
+    "integrationJob": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempt", "block_kind", "created_at", "id", "idempotency_key", "merge_commit", "project_slug", "report_id", "revision", "run_id", "state", "task_id", "updated_at"],
+      "properties": {
+        "attempt": {"type": "integer", "minimum": 0},
+        "block_kind": {"enum": [null, "integration", "knowledge"]},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "id": {"$ref": "#/$defs/jobId"},
+        "idempotency_key": {"type": "string", "minLength": 1},
+        "merge_commit": {
+          "oneOf": [
+            {"$ref": "#/$defs/gitCommit"},
+            {"type": "null"}
+          ]
+        },
+        "project_slug": {"$ref": "#/$defs/projectSlug"},
+        "report_id": {"$ref": "#/$defs/reportId"},
+        "revision": {"type": "integer", "minimum": 0},
+        "run_id": {
+          "oneOf": [
+            {"$ref": "#/$defs/runId"},
+            {"type": "null"}
+          ]
+        },
+        "state": {"enum": ["queued", "running", "retryable", "merged", "awaiting_knowledge", "changes_requested", "blocked", "done"]},
+        "task_id": {"$ref": "#/$defs/taskId"},
+        "updated_at": {"$ref": "#/$defs/timestamp"}
+      }
+    },
+    "knowledgePack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current_memory_hashes", "diff_summary", "id", "job_id", "project_slug", "report_id", "task_id"],
+      "properties": {
+        "current_memory_hashes": {"type": "object", "additionalProperties": {"$ref": "#/$defs/sha256"}},
+        "diff_summary": {"type": "string"},
+        "id": {"type": "string", "minLength": 1},
+        "job_id": {"$ref": "#/$defs/jobId"},
+        "project_slug": {"$ref": "#/$defs/projectSlug"},
+        "report_id": {"$ref": "#/$defs/reportId"},
+        "task_id": {"$ref": "#/$defs/taskId"}
+      }
+    },
+    "knowledgePatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_sha256", "operation", "path"],
+      "properties": {
+        "base_sha256": {
+          "oneOf": [
+            {"$ref": "#/$defs/sha256"},
+            {"type": "null"}
+          ]
+        },
+        "content": {"type": "string"},
+        "from_path": {"type": "string"},
+        "operation": {"enum": ["created", "updated", "deleted", "moved"]},
+        "path": {"type": "string", "minLength": 1}
+      }
+    },
+    "knowledgeProposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["created_at", "created_by", "id", "job_id", "patches", "project_slug", "report_id", "revision", "state", "summary", "task_id"],
+      "properties": {
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "created_by": {"$ref": "#/$defs/actor"},
+        "id": {"$ref": "#/$defs/proposalId"},
+        "job_id": {"$ref": "#/$defs/jobId"},
+        "patches": {"type": "array", "items": {"$ref": "#/$defs/knowledgePatch"}},
+        "project_slug": {"$ref": "#/$defs/projectSlug"},
+        "report_id": {"$ref": "#/$defs/reportId"},
+        "revision": {"type": "integer", "minimum": 0},
+        "state": {"enum": ["proposed", "validated", "stale", "blocked", "applied"]},
+        "summary": {"type": "string", "minLength": 1},
+        "task_id": {"$ref": "#/$defs/taskId"}
+      }
+    },
+    "knowledgeChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "operation", "path", "summary"],
+      "properties": {
+        "category": {"enum": ["state", "decision", "lesson", "index", "instruction", "other"]},
+        "from_path": {"type": "string"},
+        "operation": {"enum": ["created", "updated", "deleted", "moved"]},
+        "path": {"type": "string", "minLength": 1},
+        "summary": {"type": "string", "minLength": 1}
+      }
+    },
+    "knowledgeChangeSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor", "applied_at", "changes", "job_id", "knowledge_commit", "project_slug", "proposal_id", "report_id", "schema_version", "source_commit", "summary_id"],
+      "properties": {
+        "actor": {"$ref": "#/$defs/actor"},
+        "applied_at": {"$ref": "#/$defs/timestamp"},
+        "changes": {"type": "array", "items": {"$ref": "#/$defs/knowledgeChange"}},
+        "job_id": {"$ref": "#/$defs/jobId"},
+        "knowledge_commit": {
+          "oneOf": [
+            {"$ref": "#/$defs/gitCommit"},
+            {"type": "null"}
+          ]
+        },
+        "project_slug": {"$ref": "#/$defs/projectSlug"},
+        "proposal_id": {"$ref": "#/$defs/proposalId"},
+        "report_id": {"$ref": "#/$defs/reportId"},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "source_commit": {"$ref": "#/$defs/gitCommit"},
+        "summary_id": {"$ref": "#/$defs/summaryId"}
+      }
+    },
+    "logPaths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stderr", "stdout", "transcript"],
+      "properties": {
+        "stderr": {"type": "string", "minLength": 1},
+        "stdout": {"type": "string", "minLength": 1},
+        "transcript": {"$ref": "#/$defs/nullableString"}
+      }
+    },
+    "runRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor", "agent_type", "ended_at", "id", "job_id", "log_paths", "project_slug", "provider_session_id", "revision", "started_at", "state", "task_id"],
+      "properties": {
+        "actor": {"$ref": "#/$defs/actor"},
+        "agent_type": {"type": "string", "minLength": 1},
+        "ended_at": {"$ref": "#/$defs/nullableTimestamp"},
+        "id": {"$ref": "#/$defs/runId"},
+        "job_id": {
+          "oneOf": [
+            {"$ref": "#/$defs/jobId"},
+            {"type": "null"}
+          ]
+        },
+        "log_paths": {"$ref": "#/$defs/logPaths"},
+        "project_slug": {"$ref": "#/$defs/projectSlug"},
+        "provider_session_id": {"$ref": "#/$defs/nullableString"},
+        "revision": {"type": "integer", "minimum": 0},
+        "started_at": {"$ref": "#/$defs/timestamp"},
+        "state": {"enum": ["starting", "running", "succeeded", "failed", "timed_out", "cancelled"]},
+        "task_id": {
+          "oneOf": [
+            {"$ref": "#/$defs/taskId"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "commandPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allow_additional_args", "argv_prefix", "cwd_scope", "id"],
+      "properties": {
+        "allow_additional_args": {"type": "boolean"},
+        "argv_prefix": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+        "cwd_scope": {"enum": ["canonical_workspace", "report_worktree"]},
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"}
+      }
+    },
+    "managerRunRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor", "allowed_commands", "allowed_worktree_roots", "brief_path", "input_paths", "job_id", "manager_skill_path", "phase", "project_slug", "result_path", "run_id", "schema_version", "task_id", "timeout_seconds", "workspace"],
+      "properties": {
+        "actor": {"$ref": "#/$defs/actor"},
+        "allowed_commands": {"type": "array", "items": {"$ref": "#/$defs/commandPolicy"}, "uniqueItems": true},
+        "allowed_worktree_roots": {"$ref": "#/$defs/stringList"},
+        "brief_path": {"type": "string", "minLength": 1},
+        "input_paths": {"type": "object", "additionalProperties": {"type": "string", "minLength": 1}},
+        "job_id": {"$ref": "#/$defs/jobId"},
+        "manager_skill_path": {"type": "string", "minLength": 1},
+        "phase": {"enum": ["integration", "knowledge"]},
+        "project_slug": {"$ref": "#/$defs/projectSlug"},
+        "result_path": {"type": "string", "minLength": 1},
+        "run_id": {"$ref": "#/$defs/runId"},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "task_id": {"$ref": "#/$defs/taskId"},
+        "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 86400},
+        "workspace": {"type": "string", "minLength": 1}
+      }
+    },
+    "managerRunResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["changes_requested", "completed_at", "job_id", "merge_commit", "open_question_ids", "outcome", "proposal_id", "risk_summary", "run_id", "schema_version", "validation"],
+      "properties": {
+        "changes_requested": {"$ref": "#/$defs/stringList"},
+        "completed_at": {"$ref": "#/$defs/timestamp"},
+        "job_id": {"$ref": "#/$defs/jobId"},
+        "merge_commit": {
+          "oneOf": [
+            {"$ref": "#/$defs/gitCommit"},
+            {"type": "null"}
+          ]
+        },
+        "open_question_ids": {"type": "array", "items": {"$ref": "#/$defs/questionId"}, "uniqueItems": true},
+        "outcome": {"enum": ["merged", "changes_requested", "blocked", "retryable", "proposed", "stale", "no_change"]},
+        "proposal_id": {
+          "oneOf": [
+            {"$ref": "#/$defs/proposalId"},
+            {"type": "null"}
+          ]
+        },
+        "risk_summary": {"$ref": "#/$defs/nullableString"},
+        "run_id": {"$ref": "#/$defs/runId"},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "validation": {"type": "array", "items": {"$ref": "#/$defs/validation"}}
+      }
+    },
+    "imMessage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["access_scope", "conversation_id", "message_id", "permalink", "provider", "sender", "text", "timestamp"],
+      "properties": {
+        "access_scope": {"type": "string", "minLength": 1, "maxLength": 100},
+        "conversation_id": {"type": "string", "minLength": 1},
+        "message_id": {"type": "string", "minLength": 1},
+        "permalink": {"$ref": "#/$defs/nullableString"},
+        "provider": {"type": "string", "minLength": 1},
+        "sender": {"type": "string", "minLength": 1},
+        "text": {"type": "string", "minLength": 1},
+        "timestamp": {"$ref": "#/$defs/timestamp"}
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "details", "message", "retryable"],
+      "properties": {
+        "code": {"type": "string", "pattern": "^E_[A-Z0-9_]+$"},
+        "details": {"type": "object"},
+        "message": {"type": "string", "minLength": 1},
+        "retryable": {"type": "boolean"}
+      }
+    },
+    "errorResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["error", "ok", "schema_version"],
+      "properties": {
+        "error": {"$ref": "#/$defs/error"},
+        "ok": {"const": false},
+        "schema_version": {"$ref": "#/$defs/schemaVersion"}
+      }
+    }
+  }
+}

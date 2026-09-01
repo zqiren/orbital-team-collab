@@ -1,6 +1,6 @@
 ---
 id: SPEC-02
-title: /project Command & Member Workflow
+title: /team Command & Member Workflow
 status: Planned
 depends_on: [SPEC-01]
 unlocks: [SPEC-03, SPEC-04]
@@ -23,7 +23,7 @@ unlocks: [SPEC-03, SPEC-04]
 
 # Frozen Decisions
 
-- 唯一匹配时 `/project <project> <query>` 同时 claim 和返回 context。
+- 唯一匹配时 `/team claim <project> <query>` 同时 claim 和返回 context。
 - 多个匹配、无匹配、已被领取或存在 blocking question 时不得改变任务状态。
 - 只有 Confirmed Task 的 Ready 状态可被领取。
 - Report Submitted 后其他成员仍不可领取该任务。
@@ -49,12 +49,12 @@ unlocks: [SPEC-03, SPEC-04]
 
 ```text
 teamctl member join --project <name> --member <id> --agent <type>
-teamctl project <project-name> <task-id-or-query>
+teamctl claim --project <project-name> <task-id-or-query>
 teamctl task start <task-id>
 teamctl task status [task-id]
 teamctl task block <task-id> --reason <text>
-teamctl report <task-id> [--summary ...] [--validation ...]
-teamctl questions <project-name>
+teamctl report submit <task-id> [--summary ...] [--validation ...]
+teamctl question list --project <project-name>
 ```
 
 # Context Pack
@@ -67,6 +67,8 @@ teamctl questions <project-name>
 - member 必须是 project 成员。
 - branch/commit 必须属于当前 Git repo。
 - report actor 必须是当前 assignee。
+- Task ID 使用 `<project-slug>-T-<sequence>`，跨 project 唯一。
+- `Claimed → Submitted` 非法；report 前必须显式 start 进入 In Progress。
 - 同一 commit/task 重复 report 返回原 report，不生成重复提交事件。
 - block/report 的非法转换给出稳定错误码。
 

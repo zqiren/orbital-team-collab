@@ -5,17 +5,17 @@
 ## 1. 设计原则（先立规矩再列功能）
 
 1. **延伸不推翻**：project as unit 不变，team 是 unit 的共享维度——「session→project 已完成，project→team 是下一次升维」，不是推倒重来。
-2. **local-first 不破坏**：git 是同步层，不是云数据库。团队功能 = 让项目文件夹自然长成多人协作的 git 仓库；GitHub/GitLab 承载传输，Orbital 承载语义。
+2. **local-first 不破坏**：采用两层文件模型。Git 只同步经编译的 durable knowledge、配置和代码；高频 tasks/events/reports/run logs 留在本地 runtime，由 Team Dashboard 读取。Git 不是运行时数据库，跨机器实时协调留给后续 Team Cloud。
 3. **治理已有，缺的是多人**：预算/审批/沙箱/审计机制已存在，产品化方向是「多人路由」，不是新建机制。
 4. **组合即护城河**：竞品各有单点（Copilot 控制面、Devin 共享 credits、Cursor 共享 rules），无人拥有「git 化状态 × 异构编排 × 团队治理」组合（docs/02 第 5 节）。
 
 ## 2. 方向池
 
 ### F1 Shared Project State（旗舰）——「git 化的团队项目记忆」
-- 一句话：项目五类状态文件经 git 共享，成员与其 agent 读写同一份 PROJECT_STATE / DECISIONS / LESSONS / queue.json；决策变更可走 PR 评审。
+- 一句话：Manager 把项目运行中值得长期保留的学习编译进 PROJECT_STATE / DECISIONS / LESSONS / INDEX / instructions，经 Git 共享并可走 PR 评审；高频协调对象仍留在本地 runtime。
 - 为什么是 Orbital：状态天生是纯文本（docs/01 一手观察）；竞品的共享全是平台内黑盒资产（Cursor "shared team context"、Devin Knowledge、Copilot Spaces）。
 - 对位空白：空白 1（docs/02 第 4 节）。
-- 风险：合并冲突语义（两个 agent 同时写 PROJECT_STATE）——解法预告：管理 agent 作为合并仲裁者，这正是「管理 agent」身份的用武之地。
+- 风险：跨机器的 live task board 在 v1 不会仅靠 Git 自动同步——v1 诚实限定为单机多 worktree；后续 Team Cloud 同步 runtime。canonical knowledge 的 Git 冲突由 Manager 显式仲裁，不静默覆盖。
 
 ### F2 Approval Routing（旗舰）——「跨人审批流转」
 - 一句话：Workbench 从 owner 待办升级为团队风险队列：按操作类型/项目/金额路由审批人，手机批/驳，超预算自动上浮。
@@ -34,12 +34,12 @@
 - 对位空白：空白 2。依赖 F1（需要共享队列状态）。
 
 ### F5 Onboarding Protocol（演示钩子）——「冷启动继承」
-- 一句话：clone = 继承；新成员的 agent 首次冷启动自动从五类文件装配完整项目上下文（含"你最该知道的三件事"摘要）。
+- 一句话：clone = 继承 durable knowledge；setup 从版本化 seed 初始化本地 runtime；新成员的 agent 首次冷启动从五类知识文件装配项目上下文（含“你最该知道的三件事”摘要）。
 - 为什么是 Orbital：纯产品化包装，机制已有（冷启动组装进 system prompt）。
 - 定位：小而妙，**demo 的最佳载体**（可见、可感、十秒讲清）。
 
 ### F6 Team Observability（后置）——「一屏看清团队的 agent 运营」
-- 一句话：谁的项目在跑什么、进度、成本、待审批，分角色视图（工程师/负责人/财务）。
+- 一句话：v1 本地 Team Dashboard 展示谁的 agent 在跑什么、任务进度、integration 与 run/session logs；跨机器汇总、成本和审批视图随 Team Cloud/F2/F3 后置。
 - 对位竞品：Cursor usage analytics、Codex Analytics（Enterprise）、Devin；需要 F1-F3 的数据先行。
 
 ### F7 Org IT Pack（GA 前清单，不做差异化叙事）
@@ -61,7 +61,7 @@
 
 **「Git-native Team Workspace」= F1 + F2 + F3**，一张图讲清：
 
-> 项目的五类状态文件放在 git 仓库里 → 团队成员的 Orbital 各自管理 agent 读写同一份状态（F1）→ agent 的高危动作被路由给对的人审批（F2）→ 每个 project/worker 有预算闸门（F3）→ 全部发生在 local-first 沙箱内，git 只是同步层。
+> Manager 把团队运行中值得长期保留的学习编译进 Git（F1 durable layer）→ 本地 tasks/events/reports/run logs 驱动实时协作（F1 runtime layer）→ 后续 Team Cloud 让 runtime 跨机器同步，并叠加风险审批路由（F2）和统一预算闸门（F3）。v1 demo 只证明单机端到端闭环，不把 roadmap 能力伪装成已实现。
 
 叙事钩子（回应「雷同」质疑）：Claude Code 把团队功能卖给了 IT 部门（SSO/审计/限额），Orbital 把团队功能还给项目本身——**协作的最小单位不是组织架构树上的部门，而是同一个项目文件夹**。
 
@@ -69,6 +69,6 @@
 
 ## 5. 明确砍掉的方向
 
-- 自建云同步/云存储服务（破坏 local-first 身份，且 Copilot/Devin 云端占优）——git 托管交给 GitHub。
+- v1 自建云同步/云存储服务（会扩大 demo 范围且掩盖 local-first 主线）——当前用 Git 传播 durable layer；Team Cloud 作为跨机器 runtime 同步的后续路线，而非本期交付。
 - agent 对等社交网络 / 自由组队（Claude agent teams 已证明 session 级组队用不起来：one team per session、no resume）——保持「1 管理 + N worker + 多人监督」拓扑。
 - 团队版 prompt 市场（Cursor marketplace / Devin Playbooks 已拥挤，且非状态层）。
