@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+    <title>Orbital Team Dashboard</title>
+    <link rel="stylesheet" href="/assets/styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to dashboard content</a>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Git-native Team Workspace</p>
+        <h1>Team Dashboard</h1>
+      </div>
+      <label>Project
+        <select id="project-select" aria-describedby="refresh-status"></select>
+      </label>
+      <div id="actor-badge" class="badge"></div>
+    </header>
+    <nav aria-label="Dashboard views">
+      <a href="#overview">Overview</a>
+      <a href="#tasks">Tasks</a>
+      <a href="#potential">Potential Tasks</a>
+      <a href="#questions">Open Questions</a>
+      <a href="#activity">Activity &amp; Knowledge</a>
+    </nav>
+    <div id="error-banner" class="error" role="alert" hidden></div>
+    <p id="refresh-status" class="status" aria-live="polite">Loading runtime files…</p>
+    <main id="main">
+      <section id="overview" aria-labelledby="overview-title">
+        <h2 id="overview-title">Overview</h2>
+        <div id="overview-content" class="grid"></div>
+      </section>
+      <section id="tasks" aria-labelledby="tasks-title">
+        <div class="section-heading">
+          <h2 id="tasks-title">Confirmed Tasks</h2>
+          <p>Draft/Ready execution commitments. Potential Tasks remain separate.</p>
+        </div>
+        <form id="task-form" class="command-form">
+          <h3>Add Draft Task</h3>
+          <label>Title <input name="title" required maxlength="200"></label>
+          <label>Description <textarea name="description" rows="2"></textarea></label>
+          <label>Acceptance criteria <input name="acceptance" placeholder="One criterion"></label>
+          <button type="submit">Add Draft Task</button>
+        </form>
+        <div id="task-board" class="kanban" aria-live="polite"></div>
+      </section>
+      <section id="potential" aria-labelledby="potential-title">
+        <div class="section-heading">
+          <h2 id="potential-title">Potential Tasks</h2>
+          <p>Evidence-backed candidates; Promote always creates a Draft Task.</p>
+        </div>
+        <div id="potential-list" class="stack"></div>
+      </section>
+      <section id="questions" aria-labelledby="questions-title">
+        <div class="section-heading">
+          <h2 id="questions-title">Open Questions</h2>
+          <p>Blocking questions remain visible on related Tasks.</p>
+        </div>
+        <form id="question-form" class="command-form">
+          <h3>Add Open Question</h3>
+          <label>Question <input name="question" required></label>
+          <label>Owner <input name="owner" required value="human:default-manager"></label>
+          <label>Related Task ID <input name="task_id" placeholder="apollo-T-0001"></label>
+          <label class="checkbox"><input name="blocking" type="checkbox"> Blocking</label>
+          <button type="submit">Add Question</button>
+        </form>
+        <div id="question-list" class="stack"></div>
+      </section>
+      <section id="activity" aria-labelledby="activity-title">
+        <div class="section-heading">
+          <h2 id="activity-title">Activity &amp; Knowledge</h2>
+          <p>Events and schema-valid canonical knowledge summaries reconstructed from files.</p>
+        </div>
+        <div class="split">
+          <div><h3>Activity Feed</h3><ol id="activity-list" class="timeline"></ol></div>
+          <div><h3>Knowledge Changes</h3><div id="knowledge-list" class="stack"></div></div>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <strong>Local-only data.</strong> Run logs and optional transcripts are sensitive,
+      remain in the private local runtime, and are not committed to Git.
+    </footer>
+    <script type="module" src="/assets/app.js"></script>
+  </body>
+</html>

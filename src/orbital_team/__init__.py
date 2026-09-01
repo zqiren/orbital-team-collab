@@ -1,6 +1,7 @@
 """Orbital Team Workspace file runtime kernel."""
 
 from .constants import RUNTIME_DIR_NAME, SCHEMA_VERSION
+from .dashboard import DashboardAdapter, DashboardProjection, create_dashboard_server
 from .im_context import (
     FixtureIMProvider,
     IMContextProvider,
@@ -19,6 +20,8 @@ __all__ = [
     "RUNTIME_DIR_NAME",
     "SCHEMA_VERSION",
     "CommandManagerRunner",
+    "DashboardAdapter",
+    "DashboardProjection",
     "FixtureIMProvider",
     "IMContextProvider",
     "IMContextWorkflow",
@@ -32,6 +35,7 @@ __all__ = [
     "RuntimePaths",
     "TeamDaemon",
     "job_id_for_report",
+    "create_dashboard_server",
     "resolve_runtime_paths",
 ]
 

@@ -20,7 +20,7 @@ teamd = "orbital_team.teamd:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-orbital_team = ["skills/*.md"]
+orbital_team = ["skills/*.md", "dashboard_static/*"]
 
 [tool.setuptools.data-files]
 "share/orbital-team/schemas/v1" = ["schemas/v1/orbital-team.schema.json"]

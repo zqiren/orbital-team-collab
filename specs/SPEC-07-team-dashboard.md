@@ -1,7 +1,7 @@
 ---
 id: SPEC-07
 title: Tasks / Potential Tasks / Open Questions Dashboard
-status: Planned
+status: Done
 depends_on: [SPEC-04, SPEC-06]
 unlocks: [SPEC-08]
 ---
@@ -102,14 +102,14 @@ unlocks: [SPEC-08]
 
 ## Completion Record
 
-- Final status: —
-- Outcome achieved:
-- Files changed:
-- Verification run:
-- Verification result:
-- Deviations from spec:
-- Decisions recorded:
-- Lessons recorded:
-- Known limitations:
-- Working tree / commit:
-- Next spec readiness:
+- Final status: Done
+- Outcome achieved: 实现 Python IPv4 loopback Team Dashboard、可重建 file projection、active-Human actor-bound command adapter、静态 HTML/CSS/ES module UI 与 `teamctl dashboard` 入口；覆盖三类工作对象、Integration/Report/Run、Activity、Knowledge Summary/preview、bounded local logs、轮询刷新和结构化错误。
+- Files changed: 新增 `src/orbital_team/dashboard.py`、`src/orbital_team/dashboard_static/{index.html,styles.css,app.js}`、`tests/test_dashboard.py`、`docs/36-team-dashboard.md`；扩展 `MemberWorkflow.edit_task`、CLI/package exports 与 wheel static package data；更新本 spec、Spec Index 及 Orbital state/index/lessons。
+- Verification run: `python3 -m compileall -q src tests`；`python3 -m pytest -q tests/test_dashboard.py`；`python3 -m pytest -q`；`PYTHONPATH=src python3 -m orbital_team.cli dashboard --help`；`python3 -m pip wheel --no-deps --no-build-isolation ...` 并检查 wheel 静态资源；`GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null git diff --check`；静态资源 direct-JSON-write/innerHTML/credential/绝对路径扫描与只读 `git status --short`。
+- Verification result: SPEC-07 专项 9/9、全量 100/100 通过；真实临时 runtime 覆盖 projection→domain mutation、Draft edit、blocking ready gate、Potential Promote、actor override/unknown/cross-Project 拒绝、Integration/Knowledge/Run/log、损坏零覆盖、外部更新/重启恢复；内存 HTTP transport 覆盖 GET/static/POST/poll payload/403。
+- Deviations from spec: 无产品契约、依赖或架构偏离；因当前 sandbox 对 `127.0.0.1:0` listen 返回 EPERM，spec 的真实 browser/socket smoke 改为同一 `BaseHTTPRequestHandler` 的内存 HTTP smoke，未伪造真实浏览器成功，普通本机复测列为限制。
+- Decisions recorded: 无；直接遵循 D11/D12/D14 的 actor、loopback、单 package/storage 与无 Node/DB 边界。
+- Lessons recorded: 当前执行沙箱禁止 loopback listen socket；Dashboard HTTP 测试用可注入 handler transport，真实 bind 留普通本机验证。
+- Known limitations: 未在本 sandbox 运行真实浏览器或 live socket；v1 polling 固定 2 秒且 activity 上限 250 event；仅 active Manager 对应 Human actor 可写，其他已登记 Human identity 暂为只读；runner availability 只投影 manual/manifest 配置，不探测 provider 进程健康。
+- Working tree / commit: 实现与 handoff 文件保留在未提交工作树，未 commit/push、未写 `.git`；交由主 session 复测与 checkpoint。
+- Next spec readiness: SPEC-03/05/06/07 均 Done，SPEC-08 已标 Ready。

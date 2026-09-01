@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Sequence, TextIO
 
 from .errors import TeamRuntimeError
+from .dashboard import create_dashboard_server
 from .im_context import DEFAULT_FIXTURE, FixtureIMProvider, IMContextWorkflow
 from .knowledge_workflow import KnowledgeWorkflow
 from .manager_integration import ManagerIntegrationWorkflow
@@ -33,6 +34,12 @@ def _parser() -> argparse.ArgumentParser:
     reset.add_argument("--project", required=True)
     reset.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
     reset.add_argument("--yes", action="store_true")
+
+    dashboard = commands.add_parser("dashboard", help="serve the loopback Team Dashboard")
+    dashboard.add_argument("--actor", help="trusted startup actor, for example human:lead")
+    dashboard.add_argument("--host", default="127.0.0.1")
+    dashboard.add_argument("--port", type=int, default=8765)
+    dashboard.add_argument("--workspace", default=".", help=argparse.SUPPRESS)
 
     member = commands.add_parser("member", help="manage project members")
     member_commands = member.add_subparsers(dest="member_command", required=True)
@@ -298,6 +305,31 @@ def main(argv: Sequence[str] | None = None) -> int:
             result = manager.reset_runtime(
                 arguments.project, confirmed=arguments.yes
             )
+        elif arguments.command == "dashboard":
+            server = create_dashboard_server(
+                arguments.workspace,
+                actor=arguments.actor,
+                host=arguments.host,
+                port=arguments.port,
+            )
+            host, port = server.server_address[:2]
+            _emit(
+                {
+                    "actor": arguments.actor,
+                    "host": host,
+                    "ok": True,
+                    "port": port,
+                    "read_only_if_unrecognized": True,
+                    "schema_version": "1.0",
+                }
+            )
+            try:
+                server.serve_forever(poll_interval=0.25)
+            except KeyboardInterrupt:
+                pass
+            finally:
+                server.server_close()
+            return 0
         elif arguments.command == "member" and arguments.member_command == "join":
             result = MemberWorkflow(arguments.workspace).join_member(
                 arguments.project,

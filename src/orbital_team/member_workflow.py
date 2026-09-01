@@ -449,6 +449,85 @@ class MemberWorkflow:
         guard.commit(key, payload, result)
         return result
 
+    def edit_task(
+        self,
+        task_id: str,
+        *,
+        title: str | None = None,
+        description: str | None = None,
+        acceptance_criteria: Sequence[str] | None = None,
+        paths: Sequence[str] | None = None,
+        labels: Sequence[str] | None = None,
+        dependencies: Sequence[str] | None = None,
+        request_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Edit human-owned Draft fields; adapters must not mutate Task JSON."""
+        slug, project = self._project_for_task(task_id)
+        changes: dict[str, Any] = {}
+        if title is not None:
+            clean_title = title.strip()
+            if not clean_title or len(clean_title) > 200:
+                raise TeamRuntimeError(
+                    "E_USAGE", "Task title must contain 1 to 200 characters."
+                )
+            changes["title"] = clean_title
+        if description is not None:
+            changes["description"] = description
+        for field, values in (
+            ("acceptance_criteria", acceptance_criteria),
+            ("paths", paths),
+            ("labels", labels),
+            ("dependencies", dependencies),
+        ):
+            if values is not None:
+                changes[field] = list(dict.fromkeys(values))
+        if not changes:
+            raise TeamRuntimeError("E_USAGE", "At least one Task field is required.")
+        payload = {"changes": changes, "task_id": task_id}
+        key = self._request_key("task.edit", request_id, payload)
+        event_key = key
+        guard, _, replay = self._prepare(slug, key, payload, event_key)
+        if replay is not None:
+            return replay
+        store = self._store(slug, "tasks.json", "taskStore")
+        with RuntimeLock(self._project_lock(slug)):
+            tasks = store.read()
+            task = self._task(tasks, task_id)
+            if task["state"] != "draft" or task["assignee"] is not None:
+                raise TeamRuntimeError(
+                    "E_INVALID_TRANSITION",
+                    "Only an unassigned Draft task can be edited.",
+                    {"state": task["state"], "task_id": task_id},
+                )
+            if task_id in changes.get("dependencies", []):
+                raise TeamRuntimeError(
+                    "E_VALIDATION_FAILED", "A Task cannot depend on itself."
+                )
+            now = utc_now()
+            updated = copy.deepcopy(task)
+            updated.update(changes)
+            updated.update(revision=task["revision"] + 1, updated_at=now)
+            try:
+                validate("task", updated)
+            except TeamRuntimeError as exc:
+                raise TeamRuntimeError(
+                    "E_VALIDATION_FAILED", "Task edit is invalid.", exc.details
+                ) from exc
+            tasks["items"][task_id] = updated
+            tasks["revision"] += 1
+            store.write_locked(tasks)
+            self._append_event(
+                actor=f"human:{project['active_manager_id']}",
+                data={"fields": sorted(changes), "task_id": task_id},
+                event_key=event_key,
+                event_type="task.updated",
+                slug=slug,
+                timestamp=now,
+            )
+        result = {"ok": True, "schema_version": SCHEMA_VERSION, "task": updated}
+        guard.commit(key, payload, result)
+        return result
+
     def ready_task(self, task_id: str, *, request_id: str | None = None) -> dict[str, Any]:
         slug, project = self._project_for_task(task_id)
         payload = {"task_id": task_id}
