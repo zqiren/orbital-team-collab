@@ -60,3 +60,8 @@ Rejected: Python/Node 双 runtime 业务层；React/Vite + 独立 API 数据库�
 Chosen: Knowledge Proposal apply 后只 stage allowlisted canonical memory path，并创建独立的本地 knowledge commit；Knowledge Change Summary 同时记录 source merge commit 与 knowledge commit。若 Manager 判断没有值得沉淀的变化，则生成 `changes=[]`、`knowledge_commit=null` 的 no-change summary，不创建空 commit。canonical workspace 存在 pipeline 外未提交改动时返回 `E_DIRTY_WORKSPACE` 并 Blocked；任何 knowledge commit 都不得 amend code merge 或 remote push。所有 merge/knowledge commit 只能经受控 domain command，在 project + git mutation lock 内重新校验 HEAD/binding；Runner 不获得裸 `git merge/commit/push` policy。
 Reason: 只有 commit 后 durable knowledge 才真的能随 clone/PR 传播；独立 commit 让代码 merge 与知识编译分别审查和恢复，并避免覆盖用户未提交工作。
 Rejected: 只修改工作树却宣称 git-native；amend 成员/code merge；自动提交无关工作树变化；创建空 knowledge commit；自动 push。
+
+## D14 — File runtime package 与安全 marker
+Chosen: 后续 domain、CLI、daemon、adapter 统一复用 `src/orbital_team/` 单 package；规范 schema 仍以 `schemas/v1/orbital-team.schema.json` 为源，并作为 wheel data 安装。runtime 使用 `<git-common-dir>/orbital-team/.runtime-marker.json` 校验 kind/runtime/schema/demo 边界，版本化 seed 使用 `demo/seed/seed.json`；下游写入复用 `RegistryStore`、`ProjectStore`、`EventLog`、`RuntimeLock` 与 `IdempotencyGuard`，不得另建 JSON 写路径。
+Reason: SPEC-02～07 需要稳定的共享 storage 入口；marker 让 runtime-only reset 能验证精确目标，同时不把 runtime 或绝对 workspace 路径放进 Git。
+Rejected: 每个调用方自行读写 JSON；复制第二份可漂移 schema；仅凭目录名执行 reset。

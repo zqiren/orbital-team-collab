@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orbital-team-workspace"
+version = "0.1.0"
+description = "File-native Team Workspace runtime kernel"
+requires-python = ">=3.11"
+dependencies = [
+  "filelock>=3,<4",
+  "jsonschema>=4,<5",
+]
+
+[project.scripts]
+teamctl = "orbital_team.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.data-files]
+"share/orbital-team/schemas/v1" = ["schemas/v1/orbital-team.schema.json"]
+

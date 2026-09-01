@@ -27,12 +27,12 @@
 | ID | 标题 | 阶段 | 状态 | 直接依赖 | 解锁 |
 |---|---|---|---|---|---|
 | [SPEC-00](SPEC-00-product-contract-and-architecture.md) | Product Contract & Architecture | Contract | Done | — | SPEC-01 |
-| [SPEC-01](SPEC-01-file-runtime-kernel.md) | File Runtime Kernel | Runtime | Ready | SPEC-00 | SPEC-02, SPEC-06 |
-| [SPEC-02](SPEC-02-project-command-and-member-workflow.md) | `/team` Command & Member Workflow | Runtime | Planned | SPEC-01 | SPEC-03, SPEC-04 |
+| [SPEC-01](SPEC-01-file-runtime-kernel.md) | File Runtime Kernel | Runtime | Done | SPEC-00 | SPEC-02, SPEC-06 |
+| [SPEC-02](SPEC-02-project-command-and-member-workflow.md) | `/team` Command & Member Workflow | Runtime | Ready | SPEC-01 | SPEC-03, SPEC-04 |
 | [SPEC-03](SPEC-03-member-skill-and-agent-adapters.md) | Member Skill & Agent Adapters | Agent UX | Planned | SPEC-02 | SPEC-08 |
 | [SPEC-04](SPEC-04-event-driven-manager-integration.md) | Event-driven Manager Integration | Manager | Planned | SPEC-02 | SPEC-05, SPEC-07 |
 | [SPEC-05](SPEC-05-manager-knowledge-compilation.md) | Manager Knowledge Compilation | Manager | Planned | SPEC-04 | SPEC-08 |
-| [SPEC-06](SPEC-06-im-context-and-potential-task-stub.md) | IM Context & Potential Task Stub | Discovery | Planned | SPEC-01 | SPEC-07, SPEC-08 |
+| [SPEC-06](SPEC-06-im-context-and-potential-task-stub.md) | IM Context & Potential Task Stub | Discovery | Ready | SPEC-01 | SPEC-07, SPEC-08 |
 | [SPEC-07](SPEC-07-team-dashboard.md) | Tasks / Potential Tasks / Open Questions Dashboard | UI | Planned | SPEC-04, SPEC-06 | SPEC-08 |
 | [SPEC-08](SPEC-08-demo-fixture-and-orchestration.md) | Demo Fixture & Multi-agent Orchestration | Demo | Planned | SPEC-03, SPEC-05, SPEC-06, SPEC-07 | SPEC-09 |
 | [SPEC-09](SPEC-09-e2e-hardening-and-delivery.md) | End-to-end Hardening & Delivery | Delivery | Planned | SPEC-08 | — |

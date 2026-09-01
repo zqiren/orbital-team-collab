@@ -1,0 +1,10 @@
+{
+  "active_manager_id": "demo-manager",
+  "demo": true,
+  "kind": "orbital-team-seed",
+  "project_slug": "apollo",
+  "runner": "manual",
+  "schema_version": "1.0",
+  "seed_id": "demo-apollo-v1"
+}
+

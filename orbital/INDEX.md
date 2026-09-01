@@ -22,6 +22,13 @@
 ## 后续交付（规划中）
 - README 电梯陈述、可运行 demo — 按 SPEC-01～SPEC-09 分阶段交付
 
+## Runtime 实现
+- pyproject.toml — Python 3.11+ package、`teamctl` console entry 与 jsonschema/filelock 依赖声明
+- src/orbital_team/ — common-dir resolver、schema/models、atomic storage、events/idempotency、runtime lifecycle 与 CLI
+- tests/test_runtime_kernel.py — SPEC-01 的临时 Git repo/worktree、并发、损坏恢复、reset 与权限验证
+- demo/seed/ — schema-valid synthetic Apollo 初始化输入与显式 demo reset marker
+- docs/31-file-runtime-kernel.md — File Runtime Kernel 安装、运行、安全与验证说明
+
 ## 规范 Schema（schemas/）
 - schemas/README.md — runtime 文件/对象与 JSON Schema `$defs` 的消费映射
 - schemas/v1/orbital-team.schema.json — Protocol 1.0 的 JSON Schema Draft 2020-12 bundle

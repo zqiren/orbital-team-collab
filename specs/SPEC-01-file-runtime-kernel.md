@@ -1,7 +1,7 @@
 ---
 id: SPEC-01
 title: File Runtime Kernel
-status: Ready
+status: Done
 depends_on: [SPEC-00]
 unlocks: [SPEC-02, SPEC-06]
 ---
@@ -101,14 +101,14 @@ storage 模块至少提供：registry、project store、event append/read、lock
 
 ## Completion Record
 
-- Final status: —
-- Outcome achieved:
-- Files changed:
-- Verification run:
-- Verification result:
-- Deviations from spec:
-- Decisions recorded:
-- Lessons recorded:
-- Known limitations:
-- Working tree / commit:
-- Next spec readiness:
+- Final status: Done
+- Outcome achieved: 实现自包含 Python file runtime kernel：Git common-dir resolver、多 project registry/runtime 初始化、Draft 2020-12 schema validation、typed models、私有权限、跨进程锁、revisioned atomic JSON store、去重 JSONL event log、可恢复幂等 operation journal，以及 `teamctl init/status/reset --runtime-only`。
+- Files changed: 新增 `pyproject.toml`、`src/orbital_team/`、`tests/test_runtime_kernel.py`、`demo/seed/`、`docs/31-file-runtime-kernel.md`；更新 `.gitignore`、Spec Index、本 spec 与 Orbital memory/index。
+- Verification run: `PYTHONPATH=src python3 -m unittest discover -s tests -v`；单独复跑 13 项 worktree/concurrency/interruption/lock/idempotency/reset/permission/git-status 高风险矩阵；构建并在临时 venv 安装 wheel；校验 4 个 seed store；`compileall`、依赖 import 审计、凭证/绝对路径扫描、`git diff --check`。
+- Verification result: 完整测试 24/24 通过，高风险矩阵 13/13 通过；临时 repo 的 manager workspace + 两个 linked worktree 解析和读写同一 runtime；40 个唯一 event + 8 路同 event 并发只落一份，40 次同 store 更新得到 revision 40；中断 replace 保留旧 JSON；reset 保留 repo/工作文件；POSIX `0700/0600` 通过；wheel 内含并可加载全部 48 个 `$defs`，seed 4/4 有效。
+- Deviations from spec: 实现与验证无范围或冻结契约偏离；为落实协议 §17，非 demo reset 使用附加安全参数 `--yes`，带版本化 demo marker 的 runtime 可使用公开接口原形。唯一未完成项是当前沙箱拒绝创建 `.git/index.lock`，无法创建获授权的 checkpoint commit。
+- Decisions recorded: D14（`src/orbital_team` 单 package、schema wheel data、runtime/seed safety marker 与下游共享 storage API）。
+- Lessons recorded: filelock stale 文件不等于持锁、common-dir reset 的精确路径校验，以及 `$defs` fragment 不得继承 schema bundle 顶层 `oneOf`。
+- Known limitations: 实际权限/删除锁验证平台为 macOS POSIX；非 POSIX 只保留 best-effort 私有创建并未在本 session 实测；原型 event 去重读取全量 JSONL，超大日志索引/compaction 留给后续生产化。
+- Working tree / commit: 主 session 复测 24/24 通过后，已将本 spec/Index 置为 Done/Ready，并以 `feat: implement file runtime kernel (SPEC-01)` 创建单一 checkpoint（hash 见 git log）；不 push。
+- Next spec readiness: SPEC-02 与 SPEC-06 已标 Ready，可在独立 session 冷启动执行。

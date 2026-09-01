@@ -1,6 +1,12 @@
 # OS
 .DS_Store
 
+# Python local build/test artifacts
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
 # Orbital 官方源码快照（只读参考，55MB，不进交付 repo — 见 orbital/INDEX.md）
 orbital-src/
 
