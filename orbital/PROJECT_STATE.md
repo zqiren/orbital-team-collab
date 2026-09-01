@@ -2,7 +2,7 @@
 # PROJECT_STATE
 
 ## 当前阶段
-SPEC-04 Event-driven Manager Integration 已完成并保持未提交：`teamd`、Integration Job/record、ManagerRunner/manifest、Task-aware private brief、受控 merge、project Manager/git locks、retry/reconciliation 与 12 项专项测试均已交付；全量 `python3 -m pytest -q` 为 62 passed。下一阶段可执行 SPEC-05；SPEC-06 仍 Ready，故 SPEC-07 依赖未齐。
+SPEC-05 Manager Knowledge Compilation 已完成并保持未提交：Knowledge Pack → Proposal → validation → allowlisted canonical memory apply → 独立本地 knowledge commit/no-change summary → Task/Job Done → `integration.completed` 已闭环；SPEC-05 专项 8/8、全量 `python3 -m pytest -q` 70/70 通过。下一阶段按 SPEC-03 → SPEC-06 → SPEC-07 顺序执行；SPEC-08 仍等待这三项完成。
 
 ## 已完成（2026-09-01）
 - orbital/instructions/project_goals.md — 项目目标
@@ -22,6 +22,7 @@ SPEC-04 Event-driven Manager Integration 已完成并保持未提交：`teamd`�
 - demo/seed/、docs/31-file-runtime-kernel.md — 版本化 Apollo 初始化输入与 SPEC-01 安装/运行说明
 - src/orbital_team/member_workflow.py、tests/test_member_workflow.py、docs/32-member-workflow.md — worktree identity、Task resolve/原子 claim、bounded Context Pack、成员状态机、Git-bound Report 与 26 项专项测试
 - src/orbital_team/manager_integration.py、manager_runner.py、manager_proc.py、teamd.py、tests/test_manager_integration.py、docs/33-event-driven-manager-integration.md — report event 自动调度、Integration Job/Manager Run、受控 Git merge、失败/崩溃恢复、私有日志与 12 项专项测试
+- src/orbital_team/knowledge_workflow.py、skills/orbital-team-manager/、tests/test_knowledge_workflow.py、docs/34-manager-knowledge-compilation.md — durable knowledge 分类、Proposal 校验、受控独立 commit/no-change、dirty/stale/block/resume、幂等恢复与 8 项专项测试
 - orbital-src/ — Orbital 官方 main 源码快照（git clone 被沙箱挡，改 tarball，见 LESSONS）
 
 ## 核心结论（已锚定）
@@ -36,13 +37,13 @@ SPEC-04 Event-driven Manager Integration 已完成并保持未提交：`teamd`�
 - 工作系统包含 Confirmed Tasks、Potential Tasks、Open Questions；IM v1 只留 provider stub/fixture，Potential Task 经 triage 后才能成为可领取任务
 
 ## 下一步
-1. 剩余 spec 逐 spec 执行：下一项 SPEC-05（Ready），之后 SPEC-03、SPEC-06、SPEC-07、SPEC-08、SPEC-09；每个 spec 由主 session 复测后 checkpoint。SPEC-07 仅在 SPEC-06 Done 后改 Ready
-2. SPEC-03 必须复用 `MemberWorkflow`/`teamctl` 并由 current worktree join binding 推导 actor，不复制状态机或接受可冒充的 member payload；SPEC-04 从 `report.submitted` 和 immutable Report 冷启动
+1. 剩余 spec 逐 spec 执行：下一项 SPEC-03（Ready），之后 SPEC-06、SPEC-07、SPEC-08、SPEC-09；每个 spec 由主 session 复测后 checkpoint。SPEC-07 仅在 SPEC-06 Done 后改 Ready
+2. SPEC-03 必须复用 `MemberWorkflow`/`teamctl` 并由 current worktree join binding 推导 actor，不复制状态机或接受可冒充的 member payload
 3. 每个 spec 完成后由主 session 复测并本地 checkpoint commit，发送给 Kimi/其他外部对象仍需单独授权
-4. checkpoint 历史：SPEC-00 `902a870`、SPEC-01 `06691b4`、SPEC-02 `83cbf6e`；子 agent 沙箱可能无法写 `.git/index.lock`，实现后由主 session 复测并 commit；git 命令仍须加 `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null`（见 LESSONS）
+4. checkpoint 历史：SPEC-00 `902a870`、SPEC-01 `06691b4`、SPEC-02 `83cbf6e`、SPEC-04 实现层 `6e30a89`、记忆层 `fae75d7`；SPEC-05 按本 session 硬约束保持未提交；git 只读命令仍须加 `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null`（见 LESSONS）
 5. Push 由用户在本机终端执行 `cd /Users/keanezhou/Desktop/Agent-collaboration && git push -u origin main`（2026-09-01 用户决定暂缓：拒绝提供 PAT，沙箱无 gh/ssh/keychain 凭据）；后续 spec 完成同样先本地 commit，push 一并交给用户
   <!--mem id:380ae9 created:2026-09-01 touched:2026-09-01-->
 
 ## 阻塞
-- SPEC-04 无实现 blocker；外部 Codex runner smoke 在当前嵌套 sandbox 的 in-process app-server 初始化处被 EPERM 阻塞，内置 subprocess runner 的真实受控 Git smoke 已通过。Claude CLI 当前不可用。
+- SPEC-05 无实现 blocker；外部 Codex Manager Agent smoke 在当前嵌套 sandbox 的 in-process app-server 初始化处被 EPERM 阻塞，injected knowledge runner 与真实临时 Git apply/commit smoke 已通过。Claude CLI 当前不可用。
 - 已完成的 checkpoint（`902a870`、`06691b4`、`83cbf6e`）均未 push 到 origin/main；沙箱内无 HTTPS 凭据，由用户在自己终端决定 push 节奏。

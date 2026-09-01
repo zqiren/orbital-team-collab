@@ -45,3 +45,8 @@
 **What happened:** create-job transaction 若在 Job JSON 落盘后、Task→Integrating 或 `integration.queued` event 前崩溃，单看 event cursor/pending Report 会永久跳过该 Report；受控 merge 已落盘但 runner result 尚未写出时强行 Retryable 也会导致非法转换或重复 merge 风险。
 **Do instead:** teamd 每轮直接扫描 Job/Task/event canonical files，重入原 idempotent create command补齐缺失写入；若 Job 已有 guarded merge commit/event，则继续 Knowledge Pack 准备，绝不把它退回 merge 队列。
 **Keywords:** teamd, crash-recovery, reconciliation, idempotency, partial-write, duplicate-merge
+
+### 2026-09-01 — schema-object-identity-field
+**What happened:** Knowledge Change Summary 的冻结 schema 使用 `summary_id` 作为 identity，但通用 immutable project object store 最初硬编码读取 `id`，导致 knowledge commit 已创建后 runtime finalize 报 `E_CORRUPT_RUNTIME`；绕开 store 手写 summary JSON 会违反单一 storage 边界。
+**Do instead:** 共享 immutable object store 显式接受 schema identity field，默认 `id`，Knowledge Summary 配置为 `summary_id`；崩溃恢复测试必须覆盖 Git commit 已成功、runtime summary/status 尚未全部落盘的窗口。
+**Keywords:** json-schema, identity, summary_id, immutable-store, knowledge-commit, crash-recovery
