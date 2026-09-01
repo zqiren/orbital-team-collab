@@ -1,0 +1,15 @@
+# OS
+.DS_Store
+
+# Orbital 官方源码快照（只读参考，55MB，不进交付 repo — 见 orbital/INDEX.md）
+orbital-src/
+
+# Orbital 机器管理的运行时数据（session/ledger/tool output 不进交付 repo — 见 SPEC-09）
+orbital/sessions/
+orbital/ledger/
+orbital/tool-results/
+orbital/output/
+orbital/queue.json
+orbital/approval_history.jsonl
+orbital/sub_agents/**/*.jsonl
+orbital/sub_agents/**/.latest
