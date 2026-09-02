@@ -17,9 +17,12 @@ class DeliveryContractTests(unittest.TestCase):
     def test_readme_reviewer_journey_commands_and_links(self) -> None:
         readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
         for required in (
-            "30 秒电梯陈述",
-            "两层文件模型与事件闭环",
-            "Quickstart",
+            "主要产物",
+            "DESIGN.html",
+            "它解决什么问题",
+            "插件 + 钩子 + 本地 server",
+            "怎么用",
+            "两层文件模型",
             "python3 -m pip install -e .",
             "python3 -m pytest -q",
             "team_demo.py setup",
