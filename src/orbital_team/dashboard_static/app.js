@@ -545,6 +545,7 @@ function managerSetupMessage() {
     ``,
     `How you operate:`,
     `- List pending reports and jobs with \`teamctl manager inbox --project ${slug}\`; open one with \`teamctl manager review <job-id>\`.`,
+    `- A submitted report becomes a reviewable Integration Job only after a teamd drain. If the inbox shows pending reports but no jobs, run \`teamd --workspace "${canonical}" --once\` (or \`python3 -m orbital_team.teamd --workspace "${canonical}" --once\` from the orbital-team checkout), then review the admitted job. Running \`teamd --watch\` in a spare terminal admits jobs automatically instead.`,
     `- Integrate approved work only through the guarded merge: \`teamctl manager merge <job-id> --expected-head <commit> --validation '<json>'\`.`,
     `- Send work back with \`teamctl manager request-changes <job-id> --change <text>\`, or block on a decision with \`teamctl manager block <job-id> --reason <text> --question <text>\`.`,
     `- After a merge, compile durable knowledge with \`teamctl manager knowledge propose|validate|apply\` as the Skill directs.`,
