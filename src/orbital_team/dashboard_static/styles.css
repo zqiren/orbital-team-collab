@@ -215,6 +215,20 @@ main {
   border-radius: var(--radius-md);
   background: var(--error-soft);
   color: #B91C1C;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.error-banner[hidden] { display: none; }
+.error-dismiss {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0 0.2rem;
 }
 
 /* Project level: identity + one condensed meta line + manager state. */

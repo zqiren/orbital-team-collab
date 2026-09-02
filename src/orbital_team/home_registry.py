@@ -14,7 +14,7 @@ from typing import Any
 
 from .constants import SCHEMA_VERSION
 from .errors import TeamRuntimeError
-from .storage import atomic_write_json, read_json
+from .storage import RuntimeLock, atomic_write_json, read_json
 
 HOME_ENV = "ORBITAL_TEAM_HOME"
 
@@ -62,18 +62,22 @@ def read_home_projects() -> dict[str, dict[str, Any]]:
 
 
 def register_home_project(slug: str, display_name: str, workspace: str) -> None:
-    projects = read_home_projects()
-    projects[slug] = {
-        "display_name": display_name,
-        "slug": slug,
-        "workspace": workspace,
-    }
     root = home_root()
     root.mkdir(mode=0o700, parents=True, exist_ok=True)
-    atomic_write_json(
-        registry_path(),
-        {
-            "projects": {key: projects[key] for key in sorted(projects)},
-            "schema_version": SCHEMA_VERSION,
-        },
-    )
+    # Read-modify-write under a cross-process lock so concurrent creations
+    # (two dashboards, or two requests on the threading server) never lose an
+    # entry to a last-writer-wins race.
+    with RuntimeLock(root / "projects.lock"):
+        projects = read_home_projects()
+        projects[slug] = {
+            "display_name": display_name,
+            "slug": slug,
+            "workspace": workspace,
+        }
+        atomic_write_json(
+            registry_path(),
+            {
+                "projects": {key: projects[key] for key in sorted(projects)},
+                "schema_version": SCHEMA_VERSION,
+            },
+        )

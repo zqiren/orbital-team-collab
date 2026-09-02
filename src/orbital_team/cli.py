@@ -296,16 +296,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = _parser()
     try:
         arguments = parser.parse_args(argv)
-        manager = RuntimeManager(arguments.workspace)
-        if arguments.command == "init":
-            result = manager.init_project(arguments.project, seed=arguments.seed)
-        elif arguments.command == "status":
-            result = manager.status(arguments.project)
-        elif arguments.command == "reset":
-            result = manager.reset_runtime(
-                arguments.project, confirmed=arguments.yes
-            )
-        elif arguments.command == "dashboard":
+        if arguments.command == "dashboard":
+            # The dashboard lists projects from the home registry, so it must
+            # start from any directory — never resolve the cwd as a runtime.
             server = create_dashboard_server(
                 arguments.workspace,
                 actor=arguments.actor,
@@ -330,6 +323,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             finally:
                 server.server_close()
             return 0
+        manager = RuntimeManager(arguments.workspace)
+        if arguments.command == "init":
+            result = manager.init_project(arguments.project, seed=arguments.seed)
+        elif arguments.command == "status":
+            result = manager.status(arguments.project)
+        elif arguments.command == "reset":
+            result = manager.reset_runtime(
+                arguments.project, confirmed=arguments.yes
+            )
         elif arguments.command == "member" and arguments.member_command == "join":
             result = MemberWorkflow(arguments.workspace).join_member(
                 arguments.project,

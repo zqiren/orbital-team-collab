@@ -119,10 +119,16 @@ def _manager_skill_path() -> str | None:
 
 
 def _run_git(path: Path, *args: str) -> "subprocess.CompletedProcess[str]":
+    # Isolate user/system git config like every other runtime git call, so
+    # hooks, gpg signing, or template dirs never break project creation.
+    environment = os.environ.copy()
+    environment["GIT_CONFIG_GLOBAL"] = "/dev/null"
+    environment["GIT_CONFIG_SYSTEM"] = "/dev/null"
     return subprocess.run(
         ["git", "-C", os.fspath(path), *args],
         capture_output=True,
         text=True,
+        env=environment,
     )
 
 
@@ -138,15 +144,11 @@ def _initial_commit(path: Path) -> None:
     add = _run_git(path, "add", "-A")
     if add.returncode != 0:
         raise _git_failure("add", add)
-    identity: list[str] = []
-    email = _run_git(path, "config", "user.email")
-    if email.returncode != 0 or not email.stdout.strip():
-        identity = [
-            "-c", "user.name=Orbital Team",
-            "-c", "user.email=orbital-team@localhost",
-        ]
     commit = _run_git(
-        path, *identity, "commit", "--allow-empty",
+        path,
+        "-c", "user.name=Orbital Team",
+        "-c", "user.email=orbital-team@localhost",
+        "commit", "--allow-empty",
         "-m", "Initialize Orbital Team project",
     )
     if commit.returncode != 0:
@@ -219,7 +221,14 @@ class _DaemonManager:
         environment["PYTHONPATH"] = (
             src_dir + os.pathsep + existing if existing else src_dir
         )
-        log = open(self._log_path(runtime_root), "ab")
+        try:
+            log = open(self._log_path(runtime_root), "ab")
+        except OSError as exc:
+            raise TeamRuntimeError(
+                "E_GUARDRAIL_VIOLATION",
+                "Daemon could not be started.",
+                {"reason": str(exc)},
+            ) from exc
         try:
             process = subprocess.Popen(
                 [
@@ -871,7 +880,8 @@ class DashboardAdapter:
                 )
         _ensure_git_repository(workspace)
         actor_id = self.actor.split(":", 1)[1] if self.actor else None
-        result = RuntimeManager(workspace).init_project(
+        manager = RuntimeManager(workspace)
+        result = manager.init_project(
             name, active_manager_id=actor_id, runner=runner
         )
         project = result["project"]
@@ -879,8 +889,17 @@ class DashboardAdapter:
             project["slug"], project["display_name"], os.fspath(workspace)
         )
         self._refresh_directory()
+        # Best-effort: a new project starts with its daemon already running so
+        # submitted reports become jobs (and headless runners act) immediately.
+        try:
+            daemon = self._daemons.start(
+                os.fspath(workspace), manager.paths.runtime_root
+            )
+        except TeamRuntimeError:
+            daemon = {"pid": None, "running": False}
         return {
             "created": result["created"],
+            "daemon": daemon,
             "ok": True,
             "project": {
                 "created_at": project["created_at"],
@@ -1012,6 +1031,26 @@ def dashboard_handler(
         def log_message(self, format: str, *args: object) -> None:
             return
 
+        def _host_allowed(self) -> bool:
+            """Reject DNS-rebinding: the browser's Host/Origin must name the
+            loopback host, not an attacker domain resolving to 127.0.0.1."""
+            host = self.headers.get("Host", "")
+            name = host.rsplit(":", 1)[0] if re.fullmatch(r"[^:]+:\d+", host) else host
+            if not (name == "localhost" or name.startswith("127.")):
+                return False
+            origin = self.headers.get("Origin")
+            if origin:
+                origin_host = urlsplit(origin).hostname or ""
+                if not (origin_host == "localhost" or origin_host.startswith("127.")):
+                    return False
+            return True
+
+        def _reject_host(self) -> None:
+            self._error(TeamRuntimeError(
+                "E_FORBIDDEN_ACTOR",
+                "Dashboard requests must come from the loopback host.",
+            ))
+
         def _json(self, status: int, value: Any) -> None:
             payload = canonical_json(value)
             self.send_response(status)
@@ -1046,6 +1085,9 @@ def dashboard_handler(
             self.wfile.write(payload)
 
         def do_GET(self) -> None:
+            if not self._host_allowed():
+                self._reject_host()
+                return
             split = urlsplit(self.path)
             path = unquote(split.path)
             try:
@@ -1091,6 +1133,9 @@ def dashboard_handler(
                 self._error(exc)
 
         def do_POST(self) -> None:
+            if not self._host_allowed():
+                self._reject_host()
+                return
             path = unquote(urlsplit(self.path).path)
             parts = [part for part in path.split("/") if part]
             is_create = parts == ["api", "projects"]

@@ -3,8 +3,9 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'">
     <title>Orbital Team Dashboard</title>
+    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="/assets/styles.css">
   </head>
   <body>
@@ -29,7 +30,7 @@
         </div>
       </nav>
       <main id="main">
-        <div id="error-banner" class="error-banner" role="alert" hidden></div>
+        <div id="error-banner" class="error-banner" role="alert" hidden><span id="error-text"></span><button type="button" id="error-dismiss" class="error-dismiss" aria-label="Dismiss">✕</button></div>
         <header class="project-head">
           <div class="project-head-text">
             <h2 id="project-title">…</h2>

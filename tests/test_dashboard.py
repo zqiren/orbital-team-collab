@@ -436,8 +436,13 @@ class DashboardTests(unittest.TestCase):
             result = self.adapter.create_project(
                 {"name": "Gemini", "workspace": os.fspath(folder)}
             )
-            self.assertTrue(result["created"])
-            self.assertEqual("gemini", result["project"]["slug"])
+            try:
+                self.assertTrue(result["created"])
+                self.assertEqual("gemini", result["project"]["slug"])
+                # A new project starts with its daemon already running.
+                self.assertTrue(result["daemon"]["running"])
+            finally:
+                self.adapter.daemon_command("gemini", {"action": "stop"})
 
             resolved = folder.resolve()
             head = subprocess.run(
@@ -519,6 +524,7 @@ class DashboardTests(unittest.TestCase):
             result = self.adapter.create_project(
                 {"name": "Headless", "runner": "claude-code", "workspace": os.fspath(folder)}
             )
+            self.adapter.daemon_command("headless", {"action": "stop"})
             self.assertEqual("headless", result["project"]["slug"])
             snapshot = self.adapter.snapshot("headless")
             self.assertEqual("claude-code", snapshot["project"]["runner"])
@@ -580,6 +586,28 @@ class DashboardTests(unittest.TestCase):
         with self.assertRaises(TeamRuntimeError) as unauthorized:
             readonly.daemon_command("apollo", {"action": "start"})
         self.assertEqual("E_READ_ONLY", unauthorized.exception.code)
+
+    def test_rebound_host_and_foreign_origin_are_rejected(self) -> None:
+        status, payload, _ = self._raw_http(
+            b"GET /api/bootstrap HTTP/1.1\r\nHost: evil.example:8765\r\n\r\n"
+        )
+        self.assertEqual(403, status)
+        self.assertEqual("E_FORBIDDEN_ACTOR", json.loads(payload)["error"]["code"])
+        status, payload, _ = self._raw_http(
+            b"POST /api/projects HTTP/1.1\r\nHost: evil.example\r\n"
+            b"Content-Type: application/json\r\nContent-Length: 2\r\n\r\n{}"
+        )
+        self.assertEqual(403, status)
+        status, payload, _ = self._raw_http(
+            b"GET /api/bootstrap HTTP/1.1\r\nHost: 127.0.0.1:8765\r\n"
+            b"Origin: https://evil.example\r\n\r\n"
+        )
+        self.assertEqual(403, status)
+        status, _, _ = self._raw_http(
+            b"GET /api/bootstrap HTTP/1.1\r\nHost: localhost:8765\r\n"
+            b"Origin: http://localhost:8765\r\n\r\n"
+        )
+        self.assertEqual(200, status)
 
     def test_platform_browse_and_mkdir_are_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

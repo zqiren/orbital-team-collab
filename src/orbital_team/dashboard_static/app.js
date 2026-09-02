@@ -53,6 +53,7 @@ const STRINGS = {
   "state.in_progress": {en: "in progress", zh: "进行中"},
   "state.submitted": {en: "submitted", zh: "已提交"},
   "state.integrating": {en: "integrating", zh: "集成中"},
+  "state.integrationQueued": {en: "queued for integration", zh: "等待集成"},
   "state.blocked": {en: "blocked", zh: "已阻塞"},
   "state.changes_requested": {en: "changes requested", zh: "需修改"},
   "state.done": {en: "done", zh: "已完成"},
@@ -68,6 +69,9 @@ const STRINGS = {
   "state.duplicate": {en: "duplicate", zh: "重复"},
   "state.queued": {en: "queued", zh: "排队中"},
   "state.running": {en: "running", zh: "运行中"},
+  "state.retryable": {en: "retrying", zh: "重试中"},
+  "state.merged": {en: "merged", zh: "已合并"},
+  "state.awaiting_knowledge": {en: "awaiting knowledge", zh: "待知识沉淀"},
   "state.failed": {en: "failed", zh: "失败"},
   "project.meta": {en: "{slug} · {members} members · {jobs} integration jobs · runner {runner}", zh: "{slug} · {members} 名成员 · {jobs} 个集成任务 · runner {runner}"},
   "project.pending": {en: " · {n} pending", zh: " · {n} 个待处理"},
@@ -249,6 +253,8 @@ const ui = {
   drawerClose: document.querySelector("#drawer-close"),
   drawerTitle: document.querySelector("#drawer-title"),
   error: document.querySelector("#error-banner"),
+  errorDismiss: document.querySelector("#error-dismiss"),
+  errorText: document.querySelector("#error-text"),
   filePreview: document.querySelector("#file-preview"),
   fileTree: document.querySelector("#file-tree"),
   filesRefresh: document.querySelector("#files-refresh"),
@@ -298,6 +304,7 @@ const COLUMNS = [
 ];
 
 const STATE_TONE = {
+  awaiting_knowledge: "pill-warning",
   blocked: "pill-error",
   cancelled: "",
   changes_requested: "pill-error",
@@ -306,13 +313,16 @@ const STATE_TONE = {
   done: "pill-success",
   in_progress: "pill-success",
   integrating: "pill-warning",
+  merged: "pill-success",
   ready: "pill-accent",
+  retryable: "pill-warning",
   submitted: "pill-warning",
 };
 
 let snapshot = null;
 let refreshing = false;
 let projects = [];
+let bootstrapErrors = [];
 let currentProject = null;
 let currentTab = "board";
 let dragTaskId = null;
@@ -373,6 +383,20 @@ function pill(state) {
   return node("span", t(`state.${state}`), `pill ${STATE_TONE[state] || ""}`.trim());
 }
 
+function taskPill(task) {
+  // "integrating" is set the moment a job binds to the task; show it as
+  // queued only while every bound job is still waiting — a running, merged,
+  // or knowledge-phase job means integration genuinely started.
+  if (task.state === "integrating") {
+    const jobs = snapshot.integrations.filter((job) =>
+      task.integration_job_ids.includes(job.id));
+    if (jobs.length && jobs.every((job) => job.state === "queued")) {
+      return node("span", t("state.integrationQueued"), "pill pill-warning");
+    }
+  }
+  return pill(task.state);
+}
+
 function avatar(name, className) {
   return node("span", (name || "?").slice(0, 1).toUpperCase(), className || "agent-avatar");
 }
@@ -393,9 +417,24 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+let actionError = null;
+let lastSnapshotErrors = [];
+
+function paintErrors(snapshotProblems) {
+  if (snapshotProblems) lastSnapshotErrors = snapshotProblems;
+  const problems = [
+    ...(actionError ? [actionError] : []),
+    ...bootstrapErrors,
+    ...lastSnapshotErrors,
+  ];
+  ui.errorText.textContent = problems.join(" ");
+  ui.error.hidden = !problems.length;
+}
+
 function showError(message) {
-  ui.error.textContent = message;
-  ui.error.hidden = false;
+  // Sticky until dismissed — the 2s poll must not erase it mid-read.
+  actionError = message;
+  paintErrors();
 }
 
 async function jsonFetch(url, options = {}) {
@@ -436,6 +475,9 @@ function setLocale(next) {
   applyStatic();
   if (snapshot) render();
   renderFiles();
+  if (!ui.createBackdrop.hidden) {
+    updateAgentStatus(ui.createRunner.value, ui.createAgentStatus);
+  }
 }
 
 /* ------------------------------------------------------------ tab switching */
@@ -709,7 +751,7 @@ function taskCard(task) {
   if (["done", "cancelled"].includes(task.state)) card.classList.add("is-muted");
 
   const top = node("div", undefined, "card-top");
-  top.append(pill(task.state), node("span", task.id, "card-id"));
+  top.append(taskPill(task), node("span", task.id, "card-id"));
   card.append(top, node("h4", task.title, "card-title"));
 
   if (task.assignee) {
@@ -811,7 +853,7 @@ function renderDrawer() {
   ui.drawerTitle.textContent = task.title;
   clear(ui.drawerBody);
   const top = node("div", undefined, "card-top");
-  top.append(pill(task.state), node("span", task.id, "card-id"));
+  top.append(taskPill(task), node("span", task.id, "card-id"));
   ui.drawerBody.append(top);
 
   if (task.description) {
@@ -1214,7 +1256,6 @@ function renderActivity() {
 
 /* ------------------------------------------------------------------- render */
 function render() {
-  ui.error.hidden = true;
   clear(ui.actor);
   const dot = node("span", undefined, "dot");
   ui.actor.append(dot, node("span",
@@ -1225,7 +1266,9 @@ function render() {
   if (!owner.dataset.touched && document.activeElement !== owner) {
     owner.value = `human:${snapshot.manager.active_manager_id}`;
   }
-  document.querySelectorAll("form button, form input, form textarea").forEach((element) => {
+  // Scope to the per-project forms inside <main>; the New Project modal only
+  // needs the server-bound actor and must stay usable from a read-only project.
+  document.querySelectorAll("#main form button, #main form input, #main form textarea").forEach((element) => {
     element.disabled = readOnly();
   });
   ui.composerToggle.disabled = readOnly();
@@ -1238,7 +1281,7 @@ function render() {
   renderQuestions();
   renderActivity();
   renderDrawer();
-  if (snapshot.errors.length) showError(snapshot.errors.map((item) => item.message).join(" "));
+  paintErrors(snapshot.errors.map((item) => item.message));
   ui.status.textContent = t("status.live", {rev: snapshot.projection_revision.slice(0, 10)});
 }
 
@@ -1247,17 +1290,37 @@ function typingNow() {
   return element && ["INPUT", "TEXTAREA"].includes(element.tagName);
 }
 
+let pendingRefresh = false;
+
 async function refresh(force = false) {
-  if (refreshing || !currentProject) return;
+  if (!currentProject) return;
+  if (refreshing) {
+    // Never drop a forced refresh (e.g. a project switch): run it as soon as
+    // the in-flight poll settles.
+    if (force) pendingRefresh = true;
+    return;
+  }
   if (!force && (typingNow() || dragTaskId)) return;
   refreshing = true;
+  const slug = currentProject;
   try {
-    snapshot = await jsonFetch(`/api/projects/${encodeURIComponent(currentProject)}`);
-    render();
+    const value = await jsonFetch(`/api/projects/${encodeURIComponent(slug)}`);
+    if (slug === currentProject) {
+      snapshot = value;
+      render();
+    }
   } catch (error) {
-    showError(t("error.refresh", {msg: error.message}));
-    ui.status.textContent = t("status.failed");
-  } finally { refreshing = false; }
+    if (slug === currentProject) {
+      showError(t("error.refresh", {msg: error.message}));
+      ui.status.textContent = t("status.failed");
+    }
+  } finally {
+    refreshing = false;
+    if (pendingRefresh) {
+      pendingRefresh = false;
+      refresh(true);
+    }
+  }
 }
 
 /* -------------------------------------------------------------------- forms */
@@ -1303,7 +1366,12 @@ for (const tab of TABS) {
   document.querySelector(`#tab-${tab}`).addEventListener("click", () => selectTab(tab));
 }
 ui.filesRefresh.addEventListener("click", refreshFiles);
-ui.onboardMember.addEventListener("input", renderSetup);
+ui.onboardMember.addEventListener("input", () => {
+  // Mirror the backend member-id charset so the generated commands stay valid.
+  const cleaned = ui.onboardMember.value.replace(/[^a-zA-Z0-9._-]/g, "");
+  if (cleaned !== ui.onboardMember.value) ui.onboardMember.value = cleaned;
+  renderSetup();
+});
 ui.onboardAgent.addEventListener("change", renderSetup);
 
 function wireCopy(copyButton, message) {
@@ -1343,6 +1411,12 @@ ui.daemonToggle.addEventListener("click", async () => {
 });
 ui.langEn.addEventListener("click", () => setLocale("en"));
 ui.langZh.addEventListener("click", () => setLocale("zh"));
+ui.errorDismiss.addEventListener("click", () => {
+  actionError = null;
+  bootstrapErrors = [];
+  lastSnapshotErrors = [];
+  paintErrors();
+});
 ui.drawerClose.addEventListener("click", () => { openTaskId = null; ui.drawer.hidden = true; });
 ui.drawer.addEventListener("click", (event) => {
   if (event.target === ui.drawer) { openTaskId = null; ui.drawer.hidden = true; }
@@ -1575,16 +1649,19 @@ document.addEventListener("keydown", (event) => {
 let pollTimer = null;
 
 function ensurePolling() {
-  if (pollTimer === null) pollTimer = window.setInterval(refresh, 2000);
+  if (pollTimer !== null) return;
+  pollTimer = window.setInterval(refresh, 2000);
+  // The sidebar and home-registry health self-heal without a full reload:
+  // projects registered by other tools appear, and fixed errors clear.
+  window.setInterval(() => { loadBootstrap().catch(() => {}); }, 30000);
 }
 
 async function loadBootstrap() {
   const bootstrap = await jsonFetch("/api/bootstrap");
   projects = bootstrap.projects;
   ui.projectNew.hidden = !bootstrap.actor;
-  if (bootstrap.errors?.length) {
-    showError(bootstrap.errors.map((item) => item.message).join(" "));
-  }
+  bootstrapErrors = (bootstrap.errors || []).map((item) => item.message);
+  paintErrors();
   renderProjectList();
   return bootstrap;
 }
