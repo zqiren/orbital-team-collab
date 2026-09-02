@@ -196,6 +196,7 @@ class RuntimeManager:
         name: str,
         *,
         seed: str | os.PathLike[str] | None = None,
+        active_manager_id: str | None = None,
     ) -> dict[str, Any]:
         display_name = name.strip()
         if not display_name or len(display_name) > 80:
@@ -204,6 +205,8 @@ class RuntimeManager:
             )
         slug = project_slug(display_name)
         seed_manifest, seed_stores = self._read_seed(seed, slug)
+        if active_manager_id is not None:
+            seed_manifest["active_manager_id"] = active_manager_id
         try:
             self._create_layout()
         except OSError as exc:

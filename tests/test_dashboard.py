@@ -3,6 +3,8 @@ from __future__ import annotations
 import io
 import json
 import os
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -37,7 +39,10 @@ IM_FIXTURE = REPO_ROOT / "demo" / "im-fixtures" / "messages.json"
 
 class DashboardTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.environment = mock.patch.dict(os.environ, git_env(), clear=True)
+        self.home_dir = tempfile.TemporaryDirectory()
+        environment = git_env()
+        environment["ORBITAL_TEAM_HOME"] = self.home_dir.name
+        self.environment = mock.patch.dict(os.environ, environment, clear=True)
         self.environment.start()
         self.repo = GitRepository()
         self.manager = RuntimeManager(self.repo.repository)
@@ -52,6 +57,7 @@ class DashboardTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.repo.close()
         self.environment.stop()
+        self.home_dir.cleanup()
 
     def ingest(self) -> dict[str, object]:
         return self.discovery.ingest("apollo", FixtureIMProvider(IM_FIXTURE))
@@ -421,6 +427,129 @@ class DashboardTests(unittest.TestCase):
         self.assertNotIn("open-questions.json", script)
         self.assertNotIn("tasks.json", script)
         self.assertIn("/commands/", script)
+
+    def test_create_project_on_plain_folder_initializes_git_and_registers(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            folder = Path(raw) / "gemini-notes"
+            folder.mkdir()
+            (folder / "notes.md").write_text("hello\n", encoding="utf-8")
+            result = self.adapter.create_project(
+                {"name": "Gemini", "workspace": os.fspath(folder)}
+            )
+            self.assertTrue(result["created"])
+            self.assertEqual("gemini", result["project"]["slug"])
+
+            resolved = folder.resolve()
+            head = subprocess.run(
+                ["git", "-C", os.fspath(resolved), "log", "--format=%s", "-1"],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(0, head.returncode)
+            self.assertIn("Initialize Orbital Team project", head.stdout)
+            tracked = subprocess.run(
+                ["git", "-C", os.fspath(resolved), "ls-files"],
+                capture_output=True, text=True,
+            )
+            self.assertIn("notes.md", tracked.stdout)
+
+            bootstrap = self.adapter.bootstrap()
+            slugs = {item["slug"]: item for item in bootstrap["projects"]}
+            self.assertIn("apollo", slugs)
+            self.assertIn("gemini", slugs)
+            self.assertEqual(os.fspath(resolved), slugs["gemini"]["workspace"])
+            # The creating actor becomes the manager, so the project is writable.
+            self.assertFalse(slugs["gemini"]["access"]["read_only"])
+
+            snapshot = self.adapter.snapshot("gemini")
+            self.assertEqual(
+                "default-manager", snapshot["manager"]["active_manager_id"]
+            )
+            listing = self.adapter.file_tree("gemini", "")
+            self.assertIn(
+                "notes.md", [entry["name"] for entry in listing["entries"]]
+            )
+
+            # A second adapter (fresh process) finds the project via the home
+            # registry alone.
+            fresh = DashboardAdapter(None, "human:default-manager")
+            self.assertIn(
+                "gemini",
+                [item["slug"] for item in fresh.bootstrap()["projects"]],
+            )
+
+    def test_create_project_rejects_conflicts_and_bad_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            other = Path(raw) / "other"
+            other.mkdir()
+            with self.assertRaises(TeamRuntimeError) as conflict:
+                self.adapter.create_project(
+                    {"name": "Apollo", "workspace": os.fspath(other)}
+                )
+            self.assertEqual("E_IDEMPOTENCY_CONFLICT", conflict.exception.code)
+
+            with self.assertRaises(TeamRuntimeError) as missing:
+                self.adapter.create_project(
+                    {"name": "Ghost", "workspace": os.fspath(Path(raw) / "absent")}
+                )
+            self.assertEqual("E_TASK_NOT_FOUND", missing.exception.code)
+
+            with self.assertRaises(TeamRuntimeError) as relative:
+                self.adapter.create_project({"name": "Rel", "workspace": "relative/path"})
+            self.assertEqual("E_USAGE", relative.exception.code)
+
+            nested = self.repo.repository / "nested"
+            nested.mkdir()
+            with self.assertRaises(TeamRuntimeError) as inside:
+                self.adapter.create_project(
+                    {"name": "Nested", "workspace": os.fspath(nested)}
+                )
+            self.assertEqual("E_USAGE", inside.exception.code)
+
+            readonly = DashboardAdapter(self.repo.repository, None)
+            with self.assertRaises(TeamRuntimeError) as unauthorized:
+                readonly.create_project(
+                    {"name": "Blocked", "workspace": os.fspath(other)}
+                )
+            self.assertEqual("E_READ_ONLY", unauthorized.exception.code)
+
+    def test_platform_browse_and_mkdir_are_bounded(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "alpha").mkdir()
+            (root / ".hidden").mkdir()
+            (root / "file.txt").write_text("x", encoding="utf-8")
+
+            listing = self.adapter.platform_browse(os.fspath(root))
+            self.assertEqual(
+                ["alpha"], [entry["name"] for entry in listing["entries"]]
+            )
+            self.assertFalse(listing["is_git_repo"])
+            repo_listing = self.adapter.platform_browse(
+                os.fspath(self.repo.repository)
+            )
+            self.assertTrue(repo_listing["is_git_repo"])
+
+            with self.assertRaises(TeamRuntimeError) as relative:
+                self.adapter.platform_browse("relative")
+            self.assertEqual("E_USAGE", relative.exception.code)
+
+            made = self.adapter.platform_mkdir(
+                {"path": os.fspath(root / "beta")}
+            )
+            self.assertTrue(Path(made["path"]).is_dir())
+            with self.assertRaises(TeamRuntimeError) as exists:
+                self.adapter.platform_mkdir({"path": os.fspath(root / "beta")})
+            self.assertEqual("E_IDEMPOTENCY_CONFLICT", exists.exception.code)
+            with self.assertRaises(TeamRuntimeError) as orphan:
+                self.adapter.platform_mkdir(
+                    {"path": os.fspath(root / "absent" / "leaf")}
+                )
+            self.assertEqual("E_USAGE", orphan.exception.code)
+
+            readonly = DashboardAdapter(self.repo.repository, None)
+            with self.assertRaises(TeamRuntimeError) as unauthorized:
+                readonly.platform_browse(os.fspath(root))
+            self.assertEqual("E_READ_ONLY", unauthorized.exception.code)
 
 
 if __name__ == "__main__":

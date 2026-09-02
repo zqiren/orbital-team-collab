@@ -6,6 +6,7 @@ import json
 import mimetypes
 import os
 import re
+import subprocess
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -14,10 +15,11 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 from .constants import SCHEMA_VERSION
 from .errors import TeamRuntimeError
+from .home_registry import read_home_projects, register_home_project
 from .im_context import IMContextWorkflow
 from .manager_integration import JobStore
 from .member_workflow import MemberWorkflow
-from .runtime import RuntimeManager
+from .runtime import RuntimeManager, project_slug
 from .storage import (
     EventLog,
     ImmutableProjectObjectStore,
@@ -93,16 +95,87 @@ def _read_bounded(root: Path, relative: str, limit: int) -> dict[str, Any]:
     }
 
 
+def _repo_asset_path(*relative: str) -> str | None:
+    """Absolute path of a repo-checkout asset, when running from a checkout."""
+    asset = Path(__file__).resolve().parents[2].joinpath(*relative)
+    return os.fspath(asset) if asset.is_file() else None
+
+
 def _member_installer_path() -> str | None:
     """Absolute path of the member-adapter installer, when running from a checkout."""
-    installer = (
-        Path(__file__).resolve().parents[2]
-        / "skills"
-        / "orbital-team-member"
-        / "scripts"
-        / "install_adapter.py"
+    return _repo_asset_path(
+        "skills", "orbital-team-member", "scripts", "install_adapter.py"
     )
-    return os.fspath(installer) if installer.is_file() else None
+
+
+def _manager_skill_path() -> str | None:
+    """Absolute path of the Manager Skill, when running from a checkout."""
+    return _repo_asset_path("skills", "orbital-team-manager", "SKILL.md")
+
+
+def _run_git(path: Path, *args: str) -> "subprocess.CompletedProcess[str]":
+    return subprocess.run(
+        ["git", "-C", os.fspath(path), *args],
+        capture_output=True,
+        text=True,
+    )
+
+
+def _git_failure(action: str, result: "subprocess.CompletedProcess[str]") -> TeamRuntimeError:
+    return TeamRuntimeError(
+        "E_GUARDRAIL_VIOLATION",
+        f"Workspace git {action} failed.",
+        {"reason": (result.stderr or result.stdout).strip()},
+    )
+
+
+def _initial_commit(path: Path) -> None:
+    add = _run_git(path, "add", "-A")
+    if add.returncode != 0:
+        raise _git_failure("add", add)
+    identity: list[str] = []
+    email = _run_git(path, "config", "user.email")
+    if email.returncode != 0 or not email.stdout.strip():
+        identity = [
+            "-c", "user.name=Orbital Team",
+            "-c", "user.email=orbital-team@localhost",
+        ]
+    commit = _run_git(
+        path, *identity, "commit", "--allow-empty",
+        "-m", "Initialize Orbital Team project",
+    )
+    if commit.returncode != 0:
+        raise _git_failure("commit", commit)
+
+
+def _ensure_git_repository(path: Path) -> None:
+    """Make `path` the root of a git repository holding at least one commit.
+
+    Member worktrees only see committed content, so a fresh repository gets an
+    initial commit of the folder's current contents (local only, reversible by
+    deleting `.git/`).
+    """
+    probe = _run_git(path, "rev-parse", "--is-inside-work-tree")
+    if probe.returncode == 0 and probe.stdout.strip() == "true":
+        toplevel = _run_git(path, "rev-parse", "--show-toplevel")
+        if toplevel.returncode != 0:
+            raise _git_failure("inspection", toplevel)
+        if Path(toplevel.stdout.strip()).resolve() != path:
+            raise TeamRuntimeError(
+                "E_USAGE",
+                "Folder is inside an existing Git repository; choose that repository's root or a folder outside it.",
+                {"repository_root": toplevel.stdout.strip()},
+            )
+        head = _run_git(path, "rev-parse", "--verify", "HEAD")
+        if head.returncode != 0:
+            _initial_commit(path)
+        return
+    init = _run_git(path, "init", "-b", "main")
+    if init.returncode != 0:
+        init = _run_git(path, "init")
+    if init.returncode != 0:
+        raise _git_failure("init", init)
+    _initial_commit(path)
 
 
 def _read_run_log(
@@ -271,6 +344,7 @@ class DashboardProjection:
                 "runner": self._runner_status(project),
                 "slot_busy": any(job["state"] in {"queued", "running", "retryable"} for job in jobs),
             },
+            "manager_skill": _manager_skill_path(),
             "member_installer": _member_installer_path(),
             "members": sorted(members["items"].values(), key=lambda item: item["id"]),
             "open_questions": sorted(questions["items"].values(), key=lambda item: item["id"]),
@@ -387,14 +461,80 @@ class DashboardAdapter:
         "question.close": {"question_id", "reason", "request_id"},
     }
 
-    def __init__(self, workspace: str | os.PathLike[str], actor: str | None) -> None:
-        self.projection = DashboardProjection(workspace)
-        self.workspace = os.fspath(workspace)
+    def __init__(
+        self, workspace: str | os.PathLike[str] | None, actor: str | None
+    ) -> None:
+        self.workspace = os.fspath(workspace) if workspace is not None else None
         self.actor = actor if isinstance(actor, str) and ACTOR_PATTERN.fullmatch(actor) else None
+        self._projections: dict[str, DashboardProjection] = {}
+        self._slug_workspace: dict[str, str] = {}
+
+    # ------------------------------------------------------------------
+    # multi-folder project directory
+    # ------------------------------------------------------------------
+
+    def _projection_for_workspace(self, workspace: str) -> DashboardProjection:
+        projection = self._projections.get(workspace)
+        if projection is None:
+            projection = DashboardProjection(workspace)
+            self._projections[workspace] = projection
+        return projection
+
+    def _refresh_directory(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        """Rebuild the slug → workspace map from the launch workspace plus the
+        home registry; each folder's own runtime stays the source of truth."""
+        errors: list[dict[str, Any]] = []
+        sources: list[str] = []
+        if self.workspace is not None:
+            sources.append(self.workspace)
+        try:
+            home_projects = read_home_projects()
+        except TeamRuntimeError as exc:
+            home_projects = {}
+            errors.append({"message": exc.message, "workspace": None})
+        for entry in home_projects.values():
+            if entry["workspace"] not in sources:
+                sources.append(entry["workspace"])
+        projects: list[dict[str, Any]] = []
+        mapping: dict[str, str] = {}
+        for index, workspace in enumerate(sources):
+            try:
+                projection = self._projection_for_workspace(workspace)
+                canonical = os.fspath(projection.paths.repository_root)
+                for project in projection.projects():
+                    slug = project["slug"]
+                    if slug in mapping:
+                        if mapping[slug] != workspace:
+                            errors.append({
+                                "message": f"Project '{slug}' is registered from more than one folder; using {mapping[slug]}.",
+                                "workspace": workspace,
+                            })
+                        continue
+                    mapping[slug] = workspace
+                    project["workspace"] = canonical
+                    projects.append(project)
+            except TeamRuntimeError as exc:
+                # The launch directory is allowed to be a plain folder; only
+                # home-registry entries surface their failures.
+                if index == 0 and self.workspace is not None:
+                    continue
+                errors.append({"message": exc.message, "workspace": workspace})
+        self._slug_workspace = mapping
+        return projects, errors
+
+    def _project_context(self, slug: str) -> tuple[DashboardProjection, str]:
+        workspace = self._slug_workspace.get(slug)
+        if workspace is None:
+            self._refresh_directory()
+            workspace = self._slug_workspace.get(slug)
+        if workspace is None:
+            raise TeamRuntimeError("E_PROJECT_NOT_FOUND", "Project was not found.")
+        return self._projection_for_workspace(workspace), workspace
 
     def _access(self, slug: str) -> dict[str, Any]:
-        _, project = self.projection._project(slug)
-        members = self.projection._store(slug, "members.json", "memberStore")
+        projection, _ = self._project_context(slug)
+        _, project = projection._project(slug)
+        members = projection._store(slug, "members.json", "memberStore")
         actor_id = self.actor.split(":", 1)[1] if self.actor else None
         recognized = actor_id is not None and (
             actor_id == project["active_manager_id"]
@@ -408,20 +548,34 @@ class DashboardAdapter:
         }
 
     def bootstrap(self) -> dict[str, Any]:
-        projects = self.projection.projects()
+        projects, errors = self._refresh_directory()
         for project in projects:
             project["access"] = self._access(project["slug"])
         return {
             "actor": self.actor,
+            "errors": errors,
             "ok": True,
             "projects": projects,
             "schema_version": SCHEMA_VERSION,
         }
 
     def snapshot(self, slug: str) -> dict[str, Any]:
-        result = self.projection.snapshot(slug)
+        projection, _ = self._project_context(slug)
+        result = projection.snapshot(slug)
         result["access"] = self._access(slug)
         return result
+
+    def run_log(self, slug: str, run_id: str, kind: str) -> dict[str, Any]:
+        projection, _ = self._project_context(slug)
+        return projection.run_log(slug, run_id, kind)
+
+    def file_tree(self, slug: str, relative: str) -> dict[str, Any]:
+        projection, _ = self._project_context(slug)
+        return projection.file_tree(slug, relative)
+
+    def file_content(self, slug: str, relative: str) -> dict[str, Any]:
+        projection, _ = self._project_context(slug)
+        return projection.file_content(slug, relative)
 
     def _authorize(self, slug: str, payload: dict[str, Any], request_actor: str | None) -> None:
         if "actor" in payload or request_actor is not None:
@@ -453,8 +607,9 @@ class DashboardAdapter:
                 "E_USAGE", "Dashboard command contains unknown fields.", {"fields": unknown}
             )
         request_id = _optional_string(payload.get("request_id"), "request_id")
-        member = MemberWorkflow(self.workspace)
-        discovery = IMContextWorkflow(self.workspace)
+        _, workspace = self._project_context(slug)
+        member = MemberWorkflow(workspace)
+        discovery = IMContextWorkflow(workspace)
         if command == "task.create":
             return member.create_task(
                 slug,
@@ -500,6 +655,152 @@ class DashboardAdapter:
             deferred_until=_optional_string(payload.get("deferred_until"), "deferred_until"),
             request_id=request_id,
         )
+
+    # ------------------------------------------------------------------
+    # project creation and folder browsing (trusted startup actor only)
+    # ------------------------------------------------------------------
+
+    def _require_write_actor(self, request_actor: str | None) -> None:
+        if request_actor is not None:
+            raise TeamRuntimeError(
+                "E_FORBIDDEN_ACTOR",
+                "Dashboard requests cannot override the server-bound actor.",
+            )
+        if self.actor is None:
+            raise TeamRuntimeError(
+                "E_READ_ONLY", "Dashboard actor is unknown or lacks Human write authority."
+            )
+
+    @staticmethod
+    def _absolute_directory(raw: str, *, must_exist: bool = True) -> Path:
+        candidate = Path(raw).expanduser()
+        if not candidate.is_absolute():
+            raise TeamRuntimeError("E_USAGE", "Folder path must be absolute.")
+        candidate = candidate.resolve()
+        if must_exist and (candidate.is_symlink() or not candidate.is_dir()):
+            raise TeamRuntimeError(
+                "E_TASK_NOT_FOUND", "Folder path is not an existing directory."
+            )
+        return candidate
+
+    def create_project(
+        self, payload: dict[str, Any], *, request_actor: str | None = None
+    ) -> dict[str, Any]:
+        self._require_write_actor(request_actor)
+        if not isinstance(payload, dict):
+            raise TeamRuntimeError("E_USAGE", "Dashboard command body must be an object.")
+        unknown = sorted(set(payload) - {"name", "workspace"})
+        if unknown:
+            raise TeamRuntimeError(
+                "E_USAGE", "Dashboard command contains unknown fields.", {"fields": unknown}
+            )
+        name = _required_string(payload.get("name"), "name")
+        workspace = self._absolute_directory(
+            _required_string(payload.get("workspace"), "workspace")
+        )
+        slug = project_slug(name)
+        self._refresh_directory()
+        registered = self._slug_workspace.get(slug)
+        if registered is not None:
+            canonical = os.fspath(
+                self._projection_for_workspace(registered).paths.repository_root
+            )
+            if Path(canonical) != workspace:
+                raise TeamRuntimeError(
+                    "E_IDEMPOTENCY_CONFLICT",
+                    "Project slug is already registered from a different folder.",
+                    {"project_slug": slug, "workspace": canonical},
+                )
+        _ensure_git_repository(workspace)
+        actor_id = self.actor.split(":", 1)[1] if self.actor else None
+        result = RuntimeManager(workspace).init_project(
+            name, active_manager_id=actor_id
+        )
+        project = result["project"]
+        register_home_project(
+            project["slug"], project["display_name"], os.fspath(workspace)
+        )
+        self._refresh_directory()
+        return {
+            "created": result["created"],
+            "ok": True,
+            "project": {
+                "created_at": project["created_at"],
+                "display_name": project["display_name"],
+                "slug": project["slug"],
+                "workspace": os.fspath(workspace),
+            },
+            "schema_version": SCHEMA_VERSION,
+        }
+
+    def platform_folders(self, *, request_actor: str | None = None) -> dict[str, Any]:
+        self._require_write_actor(request_actor)
+        home = Path.home()
+        entries = [{"key": "home", "path": os.fspath(home)}]
+        for key, child in (
+            ("desktop", "Desktop"),
+            ("documents", "Documents"),
+            ("downloads", "Downloads"),
+        ):
+            candidate = home / child
+            if candidate.is_dir():
+                entries.append({"key": key, "path": os.fspath(candidate)})
+        return {"entries": entries, "ok": True, "schema_version": SCHEMA_VERSION}
+
+    def platform_browse(
+        self, raw: str, *, request_actor: str | None = None
+    ) -> dict[str, Any]:
+        self._require_write_actor(request_actor)
+        target = self._absolute_directory(raw) if raw else Path.home()
+        entries: list[dict[str, Any]] = []
+        try:
+            children = sorted(target.iterdir(), key=lambda item: item.name.lower())
+        except OSError:
+            raise TeamRuntimeError(
+                "E_TASK_NOT_FOUND", "Folder path is not an existing directory."
+            )
+        for child in children:
+            if child.name.startswith(".") or child.is_symlink() or not child.is_dir():
+                continue
+            if len(entries) >= MAX_TREE_ENTRIES:
+                break
+            entries.append({"name": child.name})
+        return {
+            "entries": entries,
+            "is_git_repo": (target / ".git").exists(),
+            "ok": True,
+            "parent": os.fspath(target.parent) if target.parent != target else None,
+            "path": os.fspath(target),
+            "schema_version": SCHEMA_VERSION,
+        }
+
+    def platform_mkdir(
+        self, payload: dict[str, Any], *, request_actor: str | None = None
+    ) -> dict[str, Any]:
+        self._require_write_actor(request_actor)
+        if not isinstance(payload, dict):
+            raise TeamRuntimeError("E_USAGE", "Dashboard command body must be an object.")
+        raw = _required_string(payload.get("path"), "path")
+        candidate = Path(raw).expanduser()
+        if not candidate.is_absolute():
+            raise TeamRuntimeError("E_USAGE", "Folder path must be absolute.")
+        parent = candidate.parent.resolve()
+        if not parent.is_dir():
+            raise TeamRuntimeError("E_USAGE", "Parent directory does not exist.")
+        target = parent / candidate.name
+        if target.exists():
+            raise TeamRuntimeError(
+                "E_IDEMPOTENCY_CONFLICT", "Folder already exists.", {"path": os.fspath(target)}
+            )
+        try:
+            target.mkdir()
+        except OSError as exc:
+            raise TeamRuntimeError(
+                "E_GUARDRAIL_VIOLATION",
+                "Folder could not be created.",
+                {"reason": str(exc)},
+            ) from exc
+        return {"ok": True, "path": os.fspath(target), "schema_version": SCHEMA_VERSION}
 
 
 def _http_status(error: TeamRuntimeError) -> int:
@@ -563,20 +864,29 @@ def dashboard_handler(
                 if path == "/api/bootstrap":
                     self._json(HTTPStatus.OK, adapter.bootstrap())
                     return
+                if path == "/api/platform/folders":
+                    self._json(HTTPStatus.OK, adapter.platform_folders(
+                        request_actor=self.headers.get("X-Orbital-Actor")))
+                    return
+                if path == "/api/platform/browse":
+                    raw = parse_qs(split.query).get("path", [""])[0]
+                    self._json(HTTPStatus.OK, adapter.platform_browse(
+                        raw, request_actor=self.headers.get("X-Orbital-Actor")))
+                    return
                 parts = [part for part in path.split("/") if part]
                 if len(parts) == 3 and parts[:2] == ["api", "projects"]:
                     self._json(HTTPStatus.OK, adapter.snapshot(parts[2]))
                     return
                 if len(parts) == 7 and parts[:2] == ["api", "projects"] and parts[3] == "runs" and parts[5] == "logs":
-                    self._json(HTTPStatus.OK, adapter.projection.run_log(parts[2], parts[4], parts[6]))
+                    self._json(HTTPStatus.OK, adapter.run_log(parts[2], parts[4], parts[6]))
                     return
                 if len(parts) in (4, 5) and parts[:2] == ["api", "projects"] and parts[3] == "files":
                     relative = parse_qs(split.query).get("path", [""])[0]
                     if len(parts) == 4:
-                        self._json(HTTPStatus.OK, adapter.projection.file_tree(parts[2], relative))
+                        self._json(HTTPStatus.OK, adapter.file_tree(parts[2], relative))
                         return
                     if parts[4] == "content":
-                        self._json(HTTPStatus.OK, adapter.projection.file_content(parts[2], relative))
+                        self._json(HTTPStatus.OK, adapter.file_content(parts[2], relative))
                         return
                 if path == "/":
                     self._static("index.html")
@@ -591,7 +901,12 @@ def dashboard_handler(
         def do_POST(self) -> None:
             path = unquote(urlsplit(self.path).path)
             parts = [part for part in path.split("/") if part]
-            if len(parts) != 5 or parts[:2] != ["api", "projects"] or parts[3] != "commands":
+            is_create = parts == ["api", "projects"]
+            is_mkdir = parts == ["api", "platform", "mkdir"]
+            is_command = (
+                len(parts) == 5 and parts[:2] == ["api", "projects"] and parts[3] == "commands"
+            )
+            if not (is_create or is_mkdir or is_command):
                 self.send_error(HTTPStatus.NOT_FOUND)
                 return
             if self.headers.get_content_type() != "application/json":
@@ -609,13 +924,16 @@ def dashboard_handler(
             except (json.JSONDecodeError, UnicodeDecodeError):
                 self._error(TeamRuntimeError("E_USAGE", "Dashboard request is invalid JSON."))
                 return
+            request_actor = self.headers.get("X-Orbital-Actor")
             try:
-                result = adapter.command(
-                    parts[2],
-                    parts[4],
-                    payload,
-                    request_actor=self.headers.get("X-Orbital-Actor"),
-                )
+                if is_create:
+                    result = adapter.create_project(payload, request_actor=request_actor)
+                elif is_mkdir:
+                    result = adapter.platform_mkdir(payload, request_actor=request_actor)
+                else:
+                    result = adapter.command(
+                        parts[2], parts[4], payload, request_actor=request_actor
+                    )
                 self._json(HTTPStatus.OK, result)
             except TeamRuntimeError as exc:
                 self._error(exc)
@@ -629,7 +947,7 @@ class DashboardHTTPServer(ThreadingHTTPServer):
 
 
 def create_dashboard_server(
-    workspace: str | os.PathLike[str],
+    workspace: str | os.PathLike[str] | None,
     *,
     actor: str | None,
     host: str = "127.0.0.1",
@@ -660,7 +978,7 @@ def create_dashboard_server(
 
 
 def serve_dashboard(
-    workspace: str | os.PathLike[str],
+    workspace: str | os.PathLike[str] | None,
     *,
     actor: str | None,
     host: str = "127.0.0.1",

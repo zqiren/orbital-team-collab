@@ -17,6 +17,7 @@
         </div>
         <p class="nav-label" id="projects-label" data-i18n="projects">Projects</p>
         <ul id="project-list" class="project-list" aria-labelledby="projects-label"></ul>
+        <button type="button" id="project-new" class="btn btn-quiet project-new" data-i18n="create.open" hidden>+ New project</button>
         <div class="nav-foot">
           <div class="lang-toggle" role="group" aria-label="Language / 语言">
             <button type="button" id="lang-en" class="lang-option">English</button>
@@ -36,37 +37,13 @@
           </div>
           <div id="manager-chip" class="manager-chip"></div>
         </header>
-        <section class="agents-band" aria-labelledby="agents-title">
-          <div class="band-head">
-            <h3 id="agents-title" class="band-label" data-i18n="agents">Agents</h3>
-            <button type="button" id="onboard-toggle" class="btn btn-quiet btn-small" data-i18n="onboard.add">+ Add member</button>
-          </div>
-          <div id="agent-strip" class="agent-strip"></div>
-          <div id="onboard-card" class="composer" hidden>
-            <p class="card-body" data-i18n="onboard.hint">Run this in the new member's terminal, from anywhere with access to this machine. Registration binds their identity to the worktree; the project owner runs the join line.</p>
-            <div class="composer-grid">
-              <label><span data-i18n="onboard.memberId">Member ID</span> <input id="onboard-member" maxlength="64" placeholder="carol" autocomplete="off"></label>
-              <label><span data-i18n="onboard.agentType">Agent</span>
-                <select id="onboard-agent">
-                  <option value="claude-code">claude-code</option>
-                  <option value="codex">codex</option>
-                  <option value="generic">generic</option>
-                </select>
-              </label>
-            </div>
-            <pre id="onboard-command"></pre>
-            <div class="composer-actions">
-              <button type="button" id="onboard-copy" class="btn btn-primary" data-i18n="onboard.copy">Copy command</button>
-              <button type="button" id="onboard-close" class="btn" data-i18n="form.cancel">Cancel</button>
-            </div>
-          </div>
-        </section>
         <div class="tabbar" role="tablist" aria-label="Project views">
           <button type="button" class="tab" role="tab" id="tab-board" aria-controls="panel-board" aria-selected="true"><span data-i18n="tab.board">Board</span></button>
           <button type="button" class="tab" role="tab" id="tab-inbox" aria-controls="panel-inbox" aria-selected="false"><span data-i18n="tab.inbox">Inbox</span><span id="inbox-count" class="tab-count" hidden></span></button>
           <button type="button" class="tab" role="tab" id="tab-questions" aria-controls="panel-questions" aria-selected="false"><span data-i18n="tab.questions">Questions</span><span id="question-count" class="tab-count" hidden></span></button>
           <button type="button" class="tab" role="tab" id="tab-files" aria-controls="panel-files" aria-selected="false"><span data-i18n="tab.files">Files</span></button>
           <button type="button" class="tab" role="tab" id="tab-activity" aria-controls="panel-activity" aria-selected="false"><span data-i18n="tab.activity">Activity</span></button>
+          <button type="button" class="tab" role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false"><span data-i18n="tab.settings">Settings</span></button>
         </div>
         <section id="panel-board" class="panel" role="tabpanel" aria-labelledby="tab-board">
           <div class="panel-intro">
@@ -133,6 +110,43 @@
             </div>
           </div>
         </section>
+        <section id="panel-settings" class="panel" role="tabpanel" aria-labelledby="tab-settings" hidden>
+          <div class="panel-intro">
+            <p data-i18n="settings.intro">Team roster and agent setup. Copy a setup message, paste it into an agent session, and the agent configures itself and then briefs you on how to work with it.</p>
+          </div>
+          <h3 class="band-label" data-i18n="settings.members">Members</h3>
+          <div id="member-list" class="agent-strip settings-strip"></div>
+          <div class="composer settings-block">
+            <div>
+              <h3 class="band-label" data-i18n="settings.managerTitle">Management agent</h3>
+              <p class="card-body" data-i18n="settings.managerHint">Start an agent session in the canonical workspace on this machine and paste this message. The agent adopts the manager role, inspects the team state, then briefs you on how to run the project with it.</p>
+            </div>
+            <pre id="manager-message" class="paste-message"></pre>
+            <div class="composer-actions">
+              <button type="button" id="manager-copy" class="btn btn-primary" data-i18n="settings.copy">Copy message</button>
+            </div>
+          </div>
+          <div class="composer settings-block">
+            <div>
+              <h3 class="band-label" data-i18n="settings.memberTitle">Member agent</h3>
+              <p class="card-body" data-i18n="settings.memberHint">Pick an ID for the new member, then paste this message into a fresh agent session on this machine. The agent creates the worktree, binds the member identity, installs the /team adapter, and briefs the member on the workflow.</p>
+            </div>
+            <div class="composer-grid">
+              <label><span data-i18n="onboard.memberId">Member ID</span> <input id="onboard-member" maxlength="64" placeholder="carol" autocomplete="off"></label>
+              <label><span data-i18n="onboard.agentType">Agent</span>
+                <select id="onboard-agent">
+                  <option value="claude-code">claude-code</option>
+                  <option value="codex">codex</option>
+                  <option value="generic">generic</option>
+                </select>
+              </label>
+            </div>
+            <pre id="onboard-command" class="paste-message"></pre>
+            <div class="composer-actions">
+              <button type="button" id="onboard-copy" class="btn btn-primary" data-i18n="settings.copy">Copy message</button>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
     <div id="task-drawer" class="drawer-backdrop" hidden>
@@ -143,6 +157,40 @@
         </div>
         <div id="drawer-body" class="drawer-body"></div>
       </aside>
+    </div>
+    <div id="create-backdrop" class="drawer-backdrop modal-backdrop" hidden>
+      <div class="modal" role="dialog" aria-labelledby="create-title" aria-modal="true">
+        <div class="drawer-head">
+          <h3 id="create-title" data-i18n="create.title">New project</h3>
+          <button type="button" id="create-close" class="btn btn-quiet" aria-label="Close">✕</button>
+        </div>
+        <form id="create-form" class="modal-body">
+          <label><span data-i18n="create.workspace">Project folder</span>
+            <span class="path-row">
+              <input id="create-workspace" name="workspace" autocomplete="off" spellcheck="false" data-i18n-placeholder="create.workspacePh" placeholder="/absolute/path/to/folder">
+              <button type="button" id="create-browse" class="btn" data-i18n="create.browse">Browse</button>
+            </span>
+          </label>
+          <div id="folder-browser" class="folder-browser" hidden>
+            <div id="fb-shortcuts" class="fb-chips"></div>
+            <div id="fb-recent" class="fb-chips"></div>
+            <div id="fb-crumbs" class="fb-crumbs"></div>
+            <div id="fb-list" class="fb-list"></div>
+            <div class="fb-actions">
+              <input id="fb-newfolder-name" data-i18n-placeholder="create.newFolderPh" placeholder="folder-name" autocomplete="off">
+              <button type="button" id="fb-newfolder-make" class="btn" data-i18n="create.newFolder">New folder</button>
+              <button type="button" id="fb-use" class="btn btn-primary" data-i18n="create.useFolder">Use this folder</button>
+            </div>
+          </div>
+          <label><span data-i18n="create.name">Project name</span> <input id="create-name" name="name" maxlength="80" autocomplete="off"></label>
+          <p id="create-git-note" class="git-note" hidden data-i18n="create.gitNote">Not a Git repository yet — one will be initialized here and the current contents committed locally.</p>
+          <p id="create-error" class="form-error" role="alert" hidden></p>
+          <div class="composer-actions">
+            <button type="submit" id="create-submit" class="btn btn-primary" data-i18n="create.submit">Create project</button>
+            <button type="button" id="create-cancel" class="btn" data-i18n="form.cancel">Cancel</button>
+          </div>
+        </form>
+      </div>
     </div>
     <script type="module" src="/assets/app.js"></script>
   </body>

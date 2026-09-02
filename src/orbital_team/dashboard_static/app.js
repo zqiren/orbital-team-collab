@@ -7,12 +7,12 @@ const STRINGS = {
   "projects": {en: "Projects", zh: "项目"},
   "localOnly": {en: "Local-only data.", zh: "仅限本地数据。"},
   "localOnlyBody": {en: "Run logs and optional transcripts stay in the private local runtime and are never committed to Git.", zh: "运行日志与可选转录保存在私有本地运行时中，绝不会提交到 Git。"},
-  "agents": {en: "Agents", zh: "智能体"},
   "tab.board": {en: "Board", zh: "看板"},
   "tab.inbox": {en: "Inbox", zh: "收件箱"},
   "tab.questions": {en: "Questions", zh: "问题"},
   "tab.files": {en: "Files", zh: "文件"},
   "tab.activity": {en: "Activity", zh: "动态"},
+  "tab.settings": {en: "Settings", zh: "设置"},
   "board.intro": {en: "Tasks move left to right. Drag a Backlog card onto Ready to release it to the agents, or click any card for details — every other move is made by the agents themselves.", zh: "任务从左向右流转。将「待办」卡片拖到「就绪」列即可释放给智能体认领，点击卡片查看详情——其余流转均由智能体自行完成。"},
   "board.newTask": {en: "New draft task", zh: "新建草稿任务"},
   "form.title": {en: "Title", zh: "标题"},
@@ -80,7 +80,6 @@ const STRINGS = {
   "agent.awaiting": {en: "awaiting integration of", zh: "等待集成"},
   "agent.integratingReport": {en: "integrating a report", zh: "正在集成报告"},
   "agent.runnerIdle": {en: "{runner} runner · idle", zh: "{runner} runner · 空闲"},
-  "agent.tooltip": {en: "branch {branch} · joined {when}", zh: "分支 {branch} · 加入于 {when}"},
   "actor.write": {en: "write enabled", zh: "可写"},
   "actor.readonly": {en: "read-only", zh: "只读"},
   "actor.unknown": {en: "unknown actor", zh: "未知身份"},
@@ -141,12 +140,38 @@ const STRINGS = {
   "time.justNow": {en: "just now", zh: "刚刚"},
   "time.mAgo": {en: "{m}m ago", zh: "{m} 分钟前"},
   "time.hAgo": {en: "{h}h ago", zh: "{h} 小时前"},
-  "onboard.add": {en: "+ Add member", zh: "+ 添加成员"},
-  "onboard.hint": {en: "Run this in the new member's terminal on this machine. Registration binds their identity to the worktree — the join line is the project owner's call. Afterwards, any session in that worktree speaks /team.", zh: "在本机新成员的终端中运行以下命令。注册会把成员身份绑定到该 worktree——join 这一行由项目负责人执行。此后该 worktree 中的任何会话都可使用 /team 命令。"},
   "onboard.memberId": {en: "Member ID", zh: "成员 ID"},
   "onboard.agentType": {en: "Agent", zh: "智能体"},
-  "onboard.copy": {en: "Copy command", zh: "复制命令"},
   "onboard.copied": {en: "Copied!", zh: "已复制！"},
+  "settings.intro": {en: "Team roster and agent setup. Copy a setup message, paste it into an agent session, and the agent configures itself and then briefs you on how to work with it.", zh: "团队名册与智能体设置。复制设置消息并粘贴到智能体会话中，智能体会完成自身配置，然后向你说明如何与它协作。"},
+  "settings.members": {en: "Members", zh: "成员"},
+  "settings.managerTitle": {en: "Management agent", zh: "管理智能体"},
+  "settings.managerHint": {en: "Start an agent session in the canonical workspace on this machine and paste this message. The agent adopts the manager role, inspects the team state, then briefs you on how to run the project with it.", zh: "在本机 canonical 工作区中启动智能体会话并粘贴此消息。智能体将担任管理者角色、检查团队状态，然后向你说明如何与它一起运营该项目。"},
+  "settings.memberTitle": {en: "Member agent", zh: "成员智能体"},
+  "settings.memberHint": {en: "Pick an ID for the new member, then paste this message into a fresh agent session on this machine. The agent creates the worktree, binds the member identity, installs the /team adapter, and briefs the member on the workflow.", zh: "为新成员选择一个 ID，然后将此消息粘贴到本机的全新智能体会话中。智能体会创建 worktree、绑定成员身份、安装 /team 适配器，并向成员说明工作流程。"},
+  "settings.copy": {en: "Copy message", zh: "复制消息"},
+  "member.meta": {en: "branch {branch} · joined {when}", zh: "分支 {branch} · 加入于 {when}"},
+  "create.open": {en: "+ New project", zh: "+ 新建项目"},
+  "create.title": {en: "New project", zh: "新建项目"},
+  "create.workspace": {en: "Project folder", zh: "项目文件夹"},
+  "create.workspacePh": {en: "/absolute/path/to/folder", zh: "/文件夹的绝对路径"},
+  "create.browse": {en: "Browse", zh: "浏览"},
+  "create.name": {en: "Project name", zh: "项目名称"},
+  "create.gitNote": {en: "Not a Git repository yet — one will be initialized here and the current contents committed locally.", zh: "该文件夹还不是 Git 仓库——将在此初始化仓库，并在本地提交现有内容。"},
+  "create.submit": {en: "Create project", zh: "创建项目"},
+  "create.creating": {en: "Creating…", zh: "创建中…"},
+  "create.useFolder": {en: "Use this folder", zh: "使用此文件夹"},
+  "create.newFolder": {en: "New folder", zh: "新建文件夹"},
+  "create.newFolderPh": {en: "folder-name", zh: "文件夹名称"},
+  "create.recent": {en: "Recent", zh: "最近"},
+  "create.emptyDir": {en: "No subfolders", zh: "没有子文件夹"},
+  "create.errWorkspace": {en: "Project folder is required.", zh: "必须填写项目文件夹。"},
+  "create.errAbsolute": {en: "Folder path must be absolute.", zh: "文件夹路径必须是绝对路径。"},
+  "create.errName": {en: "Project name is required.", zh: "必须填写项目名称。"},
+  "shortcut.home": {en: "Home", zh: "主目录"},
+  "shortcut.desktop": {en: "Desktop", zh: "桌面"},
+  "shortcut.documents": {en: "Documents", zh: "文稿"},
+  "shortcut.downloads": {en: "Downloads", zh: "下载"},
   "note.triaged": {en: "Reviewed in Team Dashboard", zh: "已在团队仪表盘中审阅"},
   "note.dismissed": {en: "Dismissed in Team Dashboard", zh: "已在团队仪表盘中忽略"},
   "note.deferred": {en: "Deferred in Team Dashboard", zh: "已在团队仪表盘中搁置"},
@@ -177,11 +202,28 @@ function t(key, vars) {
 const ui = {
   activity: document.querySelector("#activity-list"),
   actor: document.querySelector("#actor-badge"),
-  agents: document.querySelector("#agent-strip"),
   composer: document.querySelector("#task-form"),
   composerCancel: document.querySelector("#composer-cancel"),
   composerToggle: document.querySelector("#composer-toggle"),
+  createBackdrop: document.querySelector("#create-backdrop"),
+  createBrowse: document.querySelector("#create-browse"),
+  createCancel: document.querySelector("#create-cancel"),
+  createClose: document.querySelector("#create-close"),
+  createError: document.querySelector("#create-error"),
+  createForm: document.querySelector("#create-form"),
+  createGitNote: document.querySelector("#create-git-note"),
+  createName: document.querySelector("#create-name"),
+  createSubmit: document.querySelector("#create-submit"),
+  createWorkspace: document.querySelector("#create-workspace"),
   drawer: document.querySelector("#task-drawer"),
+  fbCrumbs: document.querySelector("#fb-crumbs"),
+  fbList: document.querySelector("#fb-list"),
+  fbNewName: document.querySelector("#fb-newfolder-name"),
+  fbNewMake: document.querySelector("#fb-newfolder-make"),
+  fbRecent: document.querySelector("#fb-recent"),
+  fbShortcuts: document.querySelector("#fb-shortcuts"),
+  fbUse: document.querySelector("#fb-use"),
+  folderBrowser: document.querySelector("#folder-browser"),
   drawerBody: document.querySelector("#drawer-body"),
   drawerClose: document.querySelector("#drawer-close"),
   drawerTitle: document.querySelector("#drawer-title"),
@@ -194,16 +236,17 @@ const ui = {
   langEn: document.querySelector("#lang-en"),
   langZh: document.querySelector("#lang-zh"),
   managerChip: document.querySelector("#manager-chip"),
+  managerCopy: document.querySelector("#manager-copy"),
+  managerMessage: document.querySelector("#manager-message"),
+  memberList: document.querySelector("#member-list"),
   onboardAgent: document.querySelector("#onboard-agent"),
-  onboardCard: document.querySelector("#onboard-card"),
-  onboardClose: document.querySelector("#onboard-close"),
   onboardCommand: document.querySelector("#onboard-command"),
   onboardCopy: document.querySelector("#onboard-copy"),
   onboardMember: document.querySelector("#onboard-member"),
-  onboardToggle: document.querySelector("#onboard-toggle"),
   potentials: document.querySelector("#potential-list"),
   projectList: document.querySelector("#project-list"),
   projectMeta: document.querySelector("#project-meta"),
+  projectNew: document.querySelector("#project-new"),
   projectTitle: document.querySelector("#project-title"),
   questionCount: document.querySelector("#question-count"),
   questionForm: document.querySelector("#question-form"),
@@ -213,7 +256,7 @@ const ui = {
   tasks: document.querySelector("#task-board"),
 };
 
-const TABS = ["board", "inbox", "questions", "files", "activity"];
+const TABS = ["board", "inbox", "questions", "files", "activity", "settings"];
 
 // Board columns group runtime states into the stages a teammate actually
 // scans for; cards keep their exact state as a pill when a column merges two.
@@ -378,6 +421,23 @@ function selectTab(name) {
 }
 
 /* ------------------------------------------------------------- project list */
+function activateProject(slug) {
+  currentProject = slug;
+  const url = new URL(window.location.href);
+  url.searchParams.set("project", currentProject);
+  window.history.replaceState(null, "", url);
+  filesState.listings.clear();
+  filesState.expanded.clear();
+  filesState.loaded = false;
+  filesState.selected = null;
+  filesState.content = null;
+  openTaskId = null;
+  ui.drawer.hidden = true;
+  renderProjectList();
+  renderFiles();
+  refresh(true);
+}
+
 function renderProjectList() {
   clear(ui.projectList);
   for (const project of projects) {
@@ -385,26 +445,14 @@ function renderProjectList() {
     const row = node("button", undefined, "project-row");
     row.type = "button";
     row.setAttribute("aria-current", String(project.slug === currentProject));
+    if (project.workspace) row.title = project.workspace;
     row.append(avatar(project.display_name, "project-avatar"));
     const text = node("span");
     text.append(node("span", project.display_name), node("span", project.slug, "slug"));
     row.append(text);
     row.addEventListener("click", () => {
       if (project.slug === currentProject) return;
-      currentProject = project.slug;
-      const url = new URL(window.location.href);
-      url.searchParams.set("project", currentProject);
-      window.history.replaceState(null, "", url);
-      filesState.listings.clear();
-      filesState.expanded.clear();
-      filesState.loaded = false;
-      filesState.selected = null;
-      filesState.content = null;
-      openTaskId = null;
-      ui.drawer.hidden = true;
-      renderProjectList();
-      renderFiles();
-      refresh(true);
+      activateProject(project.slug);
     });
     item.append(row);
     ui.projectList.append(item);
@@ -433,7 +481,7 @@ function renderHeader() {
   ui.managerChip.title = manager.runner.detail;
 }
 
-/* -------------------------------------------------------------- agent strip */
+/* ----------------------------------------------------------------- members */
 function memberStatus(member) {
   const working = snapshot.tasks.find((task) =>
     task.assignee === member.id && ["claimed", "in_progress"].includes(task.state));
@@ -444,8 +492,8 @@ function memberStatus(member) {
   return {dot: "", ref: null, text: t("agent.idle")};
 }
 
-function renderAgents() {
-  clear(ui.agents);
+function renderMembers() {
+  clear(ui.memberList);
   for (const member of snapshot.members) {
     const chip = node("div", undefined, "agent-chip");
     chip.append(avatar(member.id));
@@ -456,9 +504,9 @@ function renderAgents() {
     sub.append(node("span", undefined, `status-dot ${status.dot}`.trim()), node("span", status.text));
     if (status.ref) sub.append(node("span", status.ref, "task-ref"));
     text.append(sub);
+    text.append(node("div", t("member.meta", {branch: member.branch, when: relativeTime(member.joined_at)}), "agent-sub"));
     chip.append(text);
-    chip.title = t("agent.tooltip", {branch: member.branch, when: relativeTime(member.joined_at)});
-    ui.agents.append(chip);
+    ui.memberList.append(chip);
   }
   const manager = snapshot.manager;
   const chip = node("div", undefined, "agent-chip is-manager");
@@ -472,34 +520,82 @@ function renderAgents() {
   );
   text.append(sub);
   chip.append(text);
-  ui.agents.append(chip);
+  ui.memberList.append(chip);
 }
 
-/* --------------------------------------------------------------- onboarding */
-function onboardingCommand() {
+/* ---------------------------------------------------------- setup messages
+   Agent-facing prompts pasted into an interactive session. Kept in English so
+   the same message works for every agent type; each one ends by telling the
+   agent to brief the human before doing anything else. */
+function managerSetupMessage() {
+  const project = snapshot?.project || {};
+  const canonical = project.canonical_workspace || "<canonical-workspace>";
+  const slug = project.slug || "<project>";
+  const name = project.display_name || slug;
+  const skill = snapshot?.manager_skill
+    ? `"${snapshot.manager_skill}"`
+    : `skills/orbital-team-manager/SKILL.md inside the workspace`;
+  return [
+    `You are the management agent for the Orbital Team project "${name}" (${slug}).`,
+    ``,
+    `Set up:`,
+    `1. Work from the canonical workspace: cd "${canonical}" — every command below runs from there.`,
+    `2. Read the Manager Skill at ${skill} and treat it as your contract for integration and knowledge compilation.`,
+    `3. Inspect the current state: run \`teamctl status\` and \`teamctl manager inbox --project ${slug}\`.`,
+    ``,
+    `How you operate:`,
+    `- List pending reports and jobs with \`teamctl manager inbox --project ${slug}\`; open one with \`teamctl manager review <job-id>\`.`,
+    `- Integrate approved work only through the guarded merge: \`teamctl manager merge <job-id> --expected-head <commit> --validation '<json>'\`.`,
+    `- Send work back with \`teamctl manager request-changes <job-id> --change <text>\`, or block on a decision with \`teamctl manager block <job-id> --reason <text> --question <text>\`.`,
+    `- After a merge, compile durable knowledge with \`teamctl manager knowledge propose|validate|apply\` as the Skill directs.`,
+    `- Never run raw \`git merge/commit/push\`; state changes only through the guarded commands.`,
+    ``,
+    `When setup is complete, before doing anything else, brief the user in plain language: what this project is, the current team and task state, what you will handle for them, and what they still own (answering Open Questions and releasing tasks to Ready in the dashboard). Keep the briefing short, then wait for instructions.`,
+  ].join("\n") + briefingLanguageLine();
+}
+
+function memberSetupMessage() {
   const memberId = ui.onboardMember.value.trim() || "<member-id>";
   const agent = ui.onboardAgent.value;
-  const canonical = snapshot?.project?.canonical_workspace || "<canonical-workspace>";
-  const slug = snapshot?.project?.slug || "<project>";
+  const project = snapshot?.project || {};
+  const canonical = project.canonical_workspace || "<canonical-workspace>";
+  const slug = project.slug || "<project>";
+  const name = project.display_name || slug;
   const parent = canonical.includes("/") ? canonical.split("/").slice(0, -1).join("/") : canonical;
   const worktree = `${parent}/${memberId}`;
   const adapterAgent = agent === "claude-code" ? "claude-code" : "generic";
-  const lines = [
+  const installer = snapshot?.member_installer
+    ? `python3 "${snapshot.member_installer}" --agent ${adapterAgent} --target . --mode copy`
+    : `python3 skills/orbital-team-member/scripts/install_adapter.py --agent ${adapterAgent} --target . --mode copy  # installer lives in the orbital-team checkout`;
+  return [
+    `You are joining the Orbital Team project "${name}" (${slug}) as member "${memberId}" (agent type ${agent}).`,
+    ``,
+    `Run these commands to create the worktree and bind this member identity:`,
     `git -C "${canonical}" worktree add -b member/${memberId} "${worktree}"`,
     `cd "${worktree}"`,
     `teamctl member join --project ${slug} --member ${memberId} --agent ${agent}`,
-  ];
-  if (snapshot?.member_installer) {
-    lines.push(`python3 "${snapshot.member_installer}" --agent ${adapterAgent} --target . --mode copy`);
-  } else {
-    lines.push(`# then run install_adapter.py --agent ${adapterAgent} --target . from skills/orbital-team-member/scripts/`);
-  }
-  return lines.join("\n");
+    installer,
+    ``,
+    `Verify the setup with \`teamctl task status\` from the worktree.`,
+    ``,
+    `When setup is complete, brief the user in plain language: confirm the member identity and branch; tell them to start future agent sessions from "${worktree}" so the /team command and session hook are active; and walk them through the workflow — check \`/team status\` and \`/team questions ${slug}\`, claim one Ready task with \`/team claim ${slug} <task>\`, enter work with \`/team start <task-id>\`, commit locally on branch member/${memberId}, submit with \`/team report <task-id>\`, and raise blockers with \`/team block <task-id> <reason>\`. Members never merge or push; the manager integrates reports. Keep the briefing short, then wait for instructions.`,
+  ].join("\n") + briefingLanguageLine();
 }
 
-function renderOnboarding() {
-  if (ui.onboardCard.hidden) return;
-  ui.onboardCommand.textContent = onboardingCommand();
+function briefingLanguageLine() {
+  // The setup prompt stays English for every agent type, but the briefing is
+  // for the human — ask for it in the dashboard's language.
+  return locale === "zh" ? "\n\n请用中文向用户进行上述说明。" : "";
+}
+
+function setPre(element, text) {
+  // Leave the DOM alone when unchanged so polling doesn't clear a selection.
+  if (element.textContent !== text) element.textContent = text;
+}
+
+function renderSetup() {
+  setPre(ui.managerMessage, managerSetupMessage());
+  setPre(ui.onboardCommand, memberSetupMessage());
 }
 
 /* -------------------------------------------------------------------- board */
@@ -1030,8 +1126,8 @@ function render() {
   ui.composerToggle.disabled = readOnly();
 
   renderHeader();
-  renderAgents();
-  renderOnboarding();
+  renderMembers();
+  renderSetup();
   renderBoard();
   renderPotentials();
   renderQuestions();
@@ -1102,24 +1198,20 @@ for (const tab of TABS) {
   document.querySelector(`#tab-${tab}`).addEventListener("click", () => selectTab(tab));
 }
 ui.filesRefresh.addEventListener("click", refreshFiles);
-ui.onboardToggle.addEventListener("click", () => {
-  ui.onboardCard.hidden = !ui.onboardCard.hidden;
-  if (!ui.onboardCard.hidden) {
-    renderOnboarding();
-    ui.onboardMember.focus();
-  }
-});
-ui.onboardClose.addEventListener("click", () => { ui.onboardCard.hidden = true; });
-ui.onboardMember.addEventListener("input", renderOnboarding);
-ui.onboardAgent.addEventListener("change", renderOnboarding);
-ui.onboardCopy.addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(onboardingCommand());
-    const original = t("onboard.copy");
-    ui.onboardCopy.textContent = t("onboard.copied");
-    window.setTimeout(() => { ui.onboardCopy.textContent = original; }, 1500);
-  } catch (error) { showError(error.message); }
-});
+ui.onboardMember.addEventListener("input", renderSetup);
+ui.onboardAgent.addEventListener("change", renderSetup);
+
+function wireCopy(copyButton, message) {
+  copyButton.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(message());
+      copyButton.textContent = t("onboard.copied");
+      window.setTimeout(() => { copyButton.textContent = t("settings.copy"); }, 1500);
+    } catch (error) { showError(error.message); }
+  });
+}
+wireCopy(ui.onboardCopy, memberSetupMessage);
+wireCopy(ui.managerCopy, managerSetupMessage);
 ui.langEn.addEventListener("click", () => setLocale("en"));
 ui.langZh.addEventListener("click", () => setLocale("zh"));
 ui.drawerClose.addEventListener("click", () => { openTaskId = null; ui.drawer.hidden = true; });
@@ -1130,12 +1222,244 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && openTaskId) { openTaskId = null; ui.drawer.hidden = true; }
 });
 
+/* ------------------------------------------------------------- new project */
+const createState = {browseGit: false, browsePath: null, entries: [], nameTouched: false, shortcuts: null};
+
+function basename(path) {
+  const trimmed = path.replace(/\/+$/, "");
+  const index = trimmed.lastIndexOf("/");
+  return index >= 0 ? trimmed.slice(index + 1) : trimmed;
+}
+
+function joinPath(base, name) {
+  return base.endsWith("/") ? `${base}${name}` : `${base}/${name}`;
+}
+
+function readRecentFolders() {
+  try {
+    const value = JSON.parse(localStorage.getItem("orbital-team-recent-folders") || "[]");
+    return Array.isArray(value) ? value.filter((item) => typeof item === "string").slice(0, 5) : [];
+  } catch { return []; }
+}
+
+function rememberFolder(path) {
+  const recents = [path, ...readRecentFolders().filter((item) => item !== path)].slice(0, 5);
+  try { localStorage.setItem("orbital-team-recent-folders", JSON.stringify(recents)); } catch { /* convenience only */ }
+}
+
+function showCreateError(message) {
+  ui.createError.textContent = message;
+  ui.createError.hidden = false;
+}
+
+function openCreate() {
+  ui.createForm.reset();
+  createState.nameTouched = false;
+  createState.browsePath = null;
+  ui.createError.hidden = true;
+  ui.createGitNote.hidden = true;
+  ui.folderBrowser.hidden = true;
+  ui.createBackdrop.hidden = false;
+  ui.createWorkspace.focus();
+}
+
+function closeCreate() { ui.createBackdrop.hidden = true; }
+
+function deriveProjectName() {
+  if (createState.nameTouched) return;
+  const path = ui.createWorkspace.value.trim();
+  ui.createName.value = path ? basename(path) : "";
+}
+
+async function inspectWorkspacePath() {
+  const path = ui.createWorkspace.value.trim();
+  ui.createGitNote.hidden = true;
+  if (!path.startsWith("/") && !path.startsWith("~")) return;
+  try {
+    const info = await jsonFetch(`/api/platform/browse?path=${encodeURIComponent(path)}`);
+    ui.createGitNote.hidden = info.is_git_repo;
+  } catch { /* resolved on submit */ }
+}
+
+async function browseTo(path) {
+  try {
+    const listing = await jsonFetch(`/api/platform/browse?path=${encodeURIComponent(path || "")}`);
+    createState.browsePath = listing.path;
+    createState.browseGit = listing.is_git_repo;
+    createState.entries = listing.entries;
+    ui.createError.hidden = true;
+    renderBrowser();
+  } catch (error) { showCreateError(error.message); }
+}
+
+function folderChip(label, title, onClick) {
+  const element = node("button", label, "btn btn-quiet fb-chip");
+  element.type = "button";
+  if (title) element.title = title;
+  element.addEventListener("click", onClick);
+  return element;
+}
+
+function renderBrowser() {
+  clear(ui.fbShortcuts);
+  for (const shortcut of createState.shortcuts || []) {
+    ui.fbShortcuts.append(folderChip(t(`shortcut.${shortcut.key}`), shortcut.path, () => browseTo(shortcut.path)));
+  }
+  clear(ui.fbRecent);
+  const recents = readRecentFolders();
+  ui.fbRecent.hidden = !recents.length;
+  if (recents.length) {
+    ui.fbRecent.append(node("span", t("create.recent"), "fb-label"));
+    for (const recent of recents) {
+      ui.fbRecent.append(folderChip(basename(recent), recent, () => browseTo(recent)));
+    }
+  }
+  clear(ui.fbCrumbs);
+  const path = createState.browsePath || "/";
+  const root = node("button", "/");
+  root.type = "button";
+  root.addEventListener("click", () => browseTo("/"));
+  ui.fbCrumbs.append(root);
+  let accumulated = "";
+  for (const part of path.split("/").filter(Boolean)) {
+    accumulated += `/${part}`;
+    const target = accumulated;
+    const crumb = node("button", part);
+    crumb.type = "button";
+    crumb.addEventListener("click", () => browseTo(target));
+    ui.fbCrumbs.append(node("span", "›", "fb-sep"), crumb);
+  }
+  clear(ui.fbList);
+  if (!createState.entries.length) {
+    ui.fbList.append(node("p", t("create.emptyDir"), "tree-empty"));
+  }
+  for (const entry of createState.entries) {
+    const row = node("button", undefined, "tree-row");
+    row.type = "button";
+    row.append(node("span", undefined, "spacer"), icon("folder"), node("span", entry.name, "name"));
+    row.addEventListener("click", () => browseTo(joinPath(path, entry.name)));
+    ui.fbList.append(row);
+  }
+}
+
+async function openBrowser() {
+  if (!ui.folderBrowser.hidden) {
+    ui.folderBrowser.hidden = true;
+    return;
+  }
+  ui.folderBrowser.hidden = false;
+  if (!createState.shortcuts) {
+    try {
+      createState.shortcuts = (await jsonFetch("/api/platform/folders")).entries;
+    } catch (error) {
+      createState.shortcuts = [];
+      showCreateError(error.message);
+    }
+  }
+  const typed = ui.createWorkspace.value.trim();
+  await browseTo(typed.startsWith("/") ? typed : "");
+}
+
+function useBrowsedFolder() {
+  if (!createState.browsePath) return;
+  ui.createWorkspace.value = createState.browsePath;
+  deriveProjectName();
+  ui.createGitNote.hidden = createState.browseGit;
+  ui.folderBrowser.hidden = true;
+}
+
+async function makeNewFolder() {
+  const name = ui.fbNewName.value.trim();
+  if (!name || !createState.browsePath) return;
+  try {
+    const made = await jsonFetch("/api/platform/mkdir", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({path: joinPath(createState.browsePath, name)}),
+    });
+    ui.fbNewName.value = "";
+    await browseTo(made.path);
+  } catch (error) { showCreateError(error.message); }
+}
+
+async function submitCreate(event) {
+  event.preventDefault();
+  const workspace = ui.createWorkspace.value.trim();
+  const name = ui.createName.value.trim();
+  if (!workspace) { showCreateError(t("create.errWorkspace")); return; }
+  if (!workspace.startsWith("/") && !workspace.startsWith("~")) { showCreateError(t("create.errAbsolute")); return; }
+  if (!name) { showCreateError(t("create.errName")); return; }
+  ui.createError.hidden = true;
+  ui.createSubmit.disabled = true;
+  ui.createSubmit.textContent = t("create.creating");
+  try {
+    const result = await jsonFetch("/api/projects", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({name, workspace}),
+    });
+    rememberFolder(result.project.workspace);
+    closeCreate();
+    await loadBootstrap();
+    activateProject(result.project.slug);
+    ensurePolling();
+  } catch (error) {
+    showCreateError(error.message);
+  } finally {
+    ui.createSubmit.disabled = false;
+    ui.createSubmit.textContent = t("create.submit");
+  }
+}
+
+ui.projectNew.addEventListener("click", openCreate);
+ui.createClose.addEventListener("click", closeCreate);
+ui.createCancel.addEventListener("click", closeCreate);
+ui.createBackdrop.addEventListener("click", (event) => {
+  if (event.target === ui.createBackdrop) closeCreate();
+});
+ui.createBrowse.addEventListener("click", openBrowser);
+ui.createWorkspace.addEventListener("input", deriveProjectName);
+ui.createWorkspace.addEventListener("change", inspectWorkspacePath);
+ui.createName.addEventListener("input", () => { createState.nameTouched = true; });
+ui.fbUse.addEventListener("click", useBrowsedFolder);
+ui.fbNewMake.addEventListener("click", makeNewFolder);
+ui.fbNewName.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") { event.preventDefault(); makeNewFolder(); }
+});
+ui.createForm.addEventListener("submit", submitCreate);
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || ui.createBackdrop.hidden) return;
+  // Scoped like Orbital: the first Escape closes the folder picker, the next
+  // one the modal, so one keypress never destroys the typed form.
+  if (!ui.folderBrowser.hidden) {
+    ui.folderBrowser.hidden = true;
+    return;
+  }
+  closeCreate();
+});
+
 /* -------------------------------------------------------------------- start */
+let pollTimer = null;
+
+function ensurePolling() {
+  if (pollTimer === null) pollTimer = window.setInterval(refresh, 2000);
+}
+
+async function loadBootstrap() {
+  const bootstrap = await jsonFetch("/api/bootstrap");
+  projects = bootstrap.projects;
+  ui.projectNew.hidden = !bootstrap.actor;
+  if (bootstrap.errors?.length) {
+    showError(bootstrap.errors.map((item) => item.message).join(" "));
+  }
+  renderProjectList();
+  return bootstrap;
+}
+
 async function start() {
   applyStatic();
   try {
-    const bootstrap = await jsonFetch("/api/bootstrap");
-    projects = bootstrap.projects;
+    await loadBootstrap();
     if (!projects.length) {
       ui.status.textContent = t("status.noProjects");
       ui.projectTitle.textContent = t("status.noProjects");
@@ -1147,7 +1471,7 @@ async function start() {
       : projects[0].slug;
     renderProjectList();
     await refresh(true);
-    window.setInterval(refresh, 2000);
+    ensurePolling();
   } catch (error) { showError(error.message); }
 }
 start();
