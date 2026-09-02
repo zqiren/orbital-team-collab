@@ -31,6 +31,7 @@ from .manager_runner import (
     RunContext,
     RunnerSupervisor,
 )
+from .runners import runner_manifest_dirs
 from .storage import RuntimeLock, atomic_write_json, read_json
 
 RETRY_EXHAUSTED_QUESTION = (
@@ -102,7 +103,7 @@ class TeamDaemon:
         if name == "manual":
             return None
         search_dirs = [
-            Path(project["canonical_workspace"]) / "demo" / "runners",
+            *runner_manifest_dirs(project["canonical_workspace"]),
             *self.manifest_dirs,
         ]
         for directory in search_dirs:

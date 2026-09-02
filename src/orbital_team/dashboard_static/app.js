@@ -168,6 +168,16 @@ const STRINGS = {
   "create.errWorkspace": {en: "Project folder is required.", zh: "必须填写项目文件夹。"},
   "create.errAbsolute": {en: "Folder path must be absolute.", zh: "文件夹路径必须是绝对路径。"},
   "create.errName": {en: "Project name is required.", zh: "必须填写项目名称。"},
+  "create.runner": {en: "Manager runner", zh: "管理者运行方式"},
+  "runner.manual": {en: "manual — you paste the setup message below into an interactive agent session and drive it yourself.", zh: "manual——将下方的设置消息粘贴到交互式智能体会话中，由你自行驱动。"},
+  "agents.cliMissing": {en: "{cli} CLI was not found on PATH — install it first.", zh: "未在 PATH 中找到 {cli} CLI——请先安装。"},
+  "agents.signedIn": {en: "{cli} CLI is installed and signed in; headless runs reuse this login.", zh: "{cli} CLI 已安装并登录；无头运行将复用该登录。"},
+  "agents.signIn": {en: "{cli} CLI found, but no sign-in detected. Run `{hint}` once in a terminal.", zh: "已找到 {cli} CLI，但未检测到登录。请在终端运行一次 `{hint}`。"},
+  "settings.runnerLabel": {en: "Runner", zh: "运行方式"},
+  "settings.runnerApply": {en: "Apply", zh: "应用"},
+  "settings.teamdHint": {en: "This runner drives the manager headlessly — no window to keep open. Keep the daemon below running in a terminal; it admits submitted reports as Integration Jobs and spawns the agent using the CLI's existing sign-in.", zh: "该运行方式以无头模式驱动管理者——无需保持窗口打开。请在终端中保持运行以下守护进程；它会将已提交的报告转为集成任务，并使用 CLI 的现有登录启动智能体。"},
+  "manager.queued": {en: " · {n} queued, awaiting manager", zh: " · {n} 个排队，等待管理者"},
+  "agent.queued": {en: "{n} queued · waiting for the manager", zh: "{n} 个排队 · 等待管理者"},
   "shortcut.home": {en: "Home", zh: "主目录"},
   "shortcut.desktop": {en: "Desktop", zh: "桌面"},
   "shortcut.documents": {en: "Documents", zh: "文稿"},
@@ -205,6 +215,7 @@ const ui = {
   composer: document.querySelector("#task-form"),
   composerCancel: document.querySelector("#composer-cancel"),
   composerToggle: document.querySelector("#composer-toggle"),
+  createAgentStatus: document.querySelector("#create-agent-status"),
   createBackdrop: document.querySelector("#create-backdrop"),
   createBrowse: document.querySelector("#create-browse"),
   createCancel: document.querySelector("#create-cancel"),
@@ -213,6 +224,7 @@ const ui = {
   createForm: document.querySelector("#create-form"),
   createGitNote: document.querySelector("#create-git-note"),
   createName: document.querySelector("#create-name"),
+  createRunner: document.querySelector("#create-runner"),
   createSubmit: document.querySelector("#create-submit"),
   createWorkspace: document.querySelector("#create-workspace"),
   drawer: document.querySelector("#task-drawer"),
@@ -237,6 +249,7 @@ const ui = {
   langZh: document.querySelector("#lang-zh"),
   managerChip: document.querySelector("#manager-chip"),
   managerCopy: document.querySelector("#manager-copy"),
+  managerManual: document.querySelector("#manager-manual"),
   managerMessage: document.querySelector("#manager-message"),
   memberList: document.querySelector("#member-list"),
   onboardAgent: document.querySelector("#onboard-agent"),
@@ -252,8 +265,14 @@ const ui = {
   questionForm: document.querySelector("#question-form"),
   questions: document.querySelector("#question-list"),
   runs: document.querySelector("#run-list"),
+  settingsAgentStatus: document.querySelector("#settings-agent-status"),
+  settingsRunner: document.querySelector("#settings-runner"),
+  settingsRunnerApply: document.querySelector("#settings-runner-apply"),
+  settingsTeamd: document.querySelector("#settings-teamd"),
   status: document.querySelector("#refresh-status"),
   tasks: document.querySelector("#task-board"),
+  teamdCommand: document.querySelector("#teamd-command"),
+  teamdCopy: document.querySelector("#teamd-copy"),
 };
 
 const TABS = ["board", "inbox", "questions", "files", "activity", "settings"];
@@ -423,6 +442,7 @@ function selectTab(name) {
 /* ------------------------------------------------------------- project list */
 function activateProject(slug) {
   currentProject = slug;
+  settingsRunnerTouched = false;
   const url = new URL(window.location.href);
   url.searchParams.set("project", currentProject);
   window.history.replaceState(null, "", url);
@@ -473,10 +493,16 @@ function renderHeader() {
 
   clear(ui.managerChip);
   const dot = node("span", undefined, "dot status-dot");
-  if (manager.slot_busy) dot.classList.add("busy");
+  if (manager.running_jobs) dot.classList.add("busy");
+  else if (manager.queued_jobs) dot.classList.add("queued");
   const label = node("span");
   label.append(node("strong", `manager:${manager.active_manager_id}`));
-  label.append(document.createTextNode(manager.slot_busy ? t("manager.integrating") : t("manager.idle")));
+  label.append(document.createTextNode(
+    manager.running_jobs
+      ? t("manager.integrating")
+      : manager.queued_jobs
+        ? t("manager.queued", {n: manager.queued_jobs})
+        : t("manager.idle")));
   ui.managerChip.append(dot, label);
   ui.managerChip.title = manager.runner.detail;
 }
@@ -514,10 +540,13 @@ function renderMembers() {
   const text = node("div");
   text.append(node("div", `${manager.active_manager_id} · ${t("agent.manager")}`, "agent-name"));
   const sub = node("div", undefined, "agent-sub");
-  sub.append(
-    node("span", undefined, `status-dot ${manager.slot_busy ? "busy" : ""}`.trim()),
-    node("span", manager.slot_busy ? t("agent.integratingReport") : t("agent.runnerIdle", {runner: manager.runner.runner})),
-  );
+  const dotClass = manager.running_jobs ? "busy" : manager.queued_jobs ? "queued" : "";
+  const statusText = manager.running_jobs
+    ? t("agent.integratingReport")
+    : manager.queued_jobs
+      ? t("agent.queued", {n: manager.queued_jobs})
+      : t("agent.runnerIdle", {runner: manager.runner.runner});
+  sub.append(node("span", undefined, `status-dot ${dotClass}`.trim()), node("span", statusText));
   text.append(sub);
   chip.append(text);
   ui.memberList.append(chip);
@@ -589,14 +618,68 @@ function briefingLanguageLine() {
   return locale === "zh" ? "\n\n请用中文向用户进行上述说明。" : "";
 }
 
+function teamdCommand() {
+  const canonical = snapshot?.project?.canonical_workspace || "<canonical-workspace>";
+  return [
+    `teamd --workspace "${canonical}" --watch`,
+    `# or, from the orbital-team checkout:`,
+    `# python3 -m orbital_team.teamd --workspace "${canonical}" --watch`,
+  ].join("\n");
+}
+
 function setPre(element, text) {
   // Leave the DOM alone when unchanged so polling doesn't clear a selection.
   if (element.textContent !== text) element.textContent = text;
 }
 
+/* Local sign-in probes for the headless agent CLIs; fetched once per page. */
+let agentsInfo = null;
+let settingsRunnerTouched = false;
+
+async function loadAgents() {
+  if (agentsInfo) return agentsInfo;
+  try {
+    agentsInfo = (await jsonFetch("/api/platform/agents")).agents || {};
+  } catch { agentsInfo = {}; }
+  return agentsInfo;
+}
+
+function agentStatusText(runner) {
+  if (runner === "manual") return t("runner.manual");
+  const info = agentsInfo?.[runner];
+  if (!info) return "";
+  const cli = runner === "claude-code" ? "claude" : "codex";
+  if (!info.cli) return t("agents.cliMissing", {cli});
+  if (info.signed_in) return t("agents.signedIn", {cli});
+  return t("agents.signIn", {cli, hint: info.login_hint});
+}
+
+async function updateAgentStatus(runner, element) {
+  if (runner !== "manual") await loadAgents();
+  const text = agentStatusText(runner);
+  element.textContent = text;
+  element.hidden = !text;
+  const ready = runner === "manual"
+    || Boolean(agentsInfo?.[runner]?.cli && agentsInfo?.[runner]?.signed_in);
+  element.classList.toggle("status-warn", !ready);
+}
+
 function renderSetup() {
   setPre(ui.managerMessage, managerSetupMessage());
   setPre(ui.onboardCommand, memberSetupMessage());
+  setPre(ui.teamdCommand, teamdCommand());
+  const runner = snapshot?.project?.runner || "manual";
+  if (!settingsRunnerTouched && document.activeElement !== ui.settingsRunner) {
+    ui.settingsRunner.value = runner;
+  }
+  ui.settingsRunner.disabled = readOnly();
+  ui.settingsRunnerApply.disabled = readOnly();
+  const headless = runner !== "manual";
+  ui.managerManual.hidden = headless;
+  ui.settingsTeamd.hidden = !headless;
+  if (!readOnly()) {
+    updateAgentStatus(settingsRunnerTouched ? ui.settingsRunner.value : runner, ui.settingsAgentStatus);
+  }
 }
 
 /* -------------------------------------------------------------------- board */
@@ -1213,6 +1296,17 @@ function wireCopy(copyButton, message) {
 }
 wireCopy(ui.onboardCopy, memberSetupMessage);
 wireCopy(ui.managerCopy, managerSetupMessage);
+wireCopy(ui.teamdCopy, teamdCommand);
+
+ui.settingsRunner.addEventListener("change", () => {
+  settingsRunnerTouched = true;
+  updateAgentStatus(ui.settingsRunner.value, ui.settingsAgentStatus);
+});
+ui.settingsRunnerApply.addEventListener("click", async () => {
+  const runner = ui.settingsRunner.value;
+  settingsRunnerTouched = false;
+  await mutate("project.runner", {runner});
+});
 ui.langEn.addEventListener("click", () => setLocale("en"));
 ui.langZh.addEventListener("click", () => setLocale("zh"));
 ui.drawerClose.addEventListener("click", () => { openTaskId = null; ui.drawer.hidden = true; });
@@ -1262,6 +1356,7 @@ function openCreate() {
   ui.folderBrowser.hidden = true;
   ui.createBackdrop.hidden = false;
   ui.createWorkspace.focus();
+  updateAgentStatus(ui.createRunner.value, ui.createAgentStatus);
 }
 
 function closeCreate() { ui.createBackdrop.hidden = true; }
@@ -1397,7 +1492,7 @@ async function submitCreate(event) {
     const result = await jsonFetch("/api/projects", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({name, workspace}),
+      body: JSON.stringify({name, runner: ui.createRunner.value, workspace}),
     });
     rememberFolder(result.project.workspace);
     closeCreate();
@@ -1422,6 +1517,9 @@ ui.createBrowse.addEventListener("click", openBrowser);
 ui.createWorkspace.addEventListener("input", deriveProjectName);
 ui.createWorkspace.addEventListener("change", inspectWorkspacePath);
 ui.createName.addEventListener("input", () => { createState.nameTouched = true; });
+ui.createRunner.addEventListener("change", () => {
+  updateAgentStatus(ui.createRunner.value, ui.createAgentStatus);
+});
 ui.fbUse.addEventListener("click", useBrowsedFolder);
 ui.fbNewMake.addEventListener("click", makeNewFolder);
 ui.fbNewName.addEventListener("keydown", (event) => {

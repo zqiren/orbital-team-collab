@@ -512,6 +512,45 @@ class DashboardTests(unittest.TestCase):
                 )
             self.assertEqual("E_READ_ONLY", unauthorized.exception.code)
 
+    def test_runner_selection_probes_and_updates(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            folder = Path(raw) / "headless"
+            folder.mkdir()
+            result = self.adapter.create_project(
+                {"name": "Headless", "runner": "claude-code", "workspace": os.fspath(folder)}
+            )
+            self.assertEqual("headless", result["project"]["slug"])
+            snapshot = self.adapter.snapshot("headless")
+            self.assertEqual("claude-code", snapshot["project"]["runner"])
+            # The bundled manifest resolves from the orbital-team checkout even
+            # though the new folder has no demo/runners of its own.
+            self.assertTrue(snapshot["manager"]["runner"]["available"])
+            self.assertEqual(0, snapshot["manager"]["queued_jobs"])
+            self.assertEqual(0, snapshot["manager"]["running_jobs"])
+
+            other = Path(raw) / "invalid-runner"
+            other.mkdir()
+            with self.assertRaises(TeamRuntimeError) as unknown:
+                self.adapter.create_project(
+                    {"name": "Bad", "runner": "no-such-runner", "workspace": os.fspath(other)}
+                )
+            self.assertEqual("E_RUNNER_UNAVAILABLE", unknown.exception.code)
+
+            switched = self.adapter.command("headless", "project.runner", {"runner": "manual"})
+            self.assertEqual("manual", switched["project"]["runner"])
+            back = self.adapter.command("headless", "project.runner", {"runner": "codex"})
+            self.assertEqual("codex", back["project"]["runner"])
+            with self.assertRaises(TeamRuntimeError) as invalid:
+                self.adapter.command("headless", "project.runner", {"runner": "no-such-runner"})
+            self.assertEqual("E_RUNNER_UNAVAILABLE", invalid.exception.code)
+
+            agents = self.adapter.platform_agents()
+            for key in ("claude-code", "codex"):
+                self.assertIn(key, agents["agents"])
+                self.assertIsInstance(agents["agents"][key]["cli"], bool)
+                self.assertIsInstance(agents["agents"][key]["signed_in"], bool)
+                self.assertTrue(agents["agents"][key]["login_hint"])
+
     def test_platform_browse_and_mkdir_are_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

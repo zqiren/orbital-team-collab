@@ -6,7 +6,9 @@ import json
 import mimetypes
 import os
 import re
+import shutil
 import subprocess
+import sys
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -19,6 +21,7 @@ from .home_registry import read_home_projects, register_home_project
 from .im_context import IMContextWorkflow
 from .manager_integration import JobStore
 from .member_workflow import MemberWorkflow
+from .runners import find_runner_manifest
 from .runtime import RuntimeManager, project_slug
 from .storage import (
     EventLog,
@@ -255,12 +258,10 @@ class DashboardProjection:
                 "detail": "Manual runner: no automatic Manager process is configured.",
                 "runner": runner,
             }
-        manifest = (
-            Path(project["canonical_workspace"]) / "demo" / "runners" / f"{runner}.json"
-        )
+        manifest = find_runner_manifest(runner, project["canonical_workspace"])
         return {
-            "available": manifest.is_file(),
-            "detail": "Runner manifest found." if manifest.is_file() else "Runner manifest unavailable.",
+            "available": manifest is not None,
+            "detail": "Runner manifest found." if manifest else "Runner manifest unavailable.",
             "runner": runner,
         }
 
@@ -341,7 +342,9 @@ class DashboardProjection:
             "manager": {
                 "active_manager_id": project["active_manager_id"],
                 "pending_jobs": sum(job["state"] not in {"done", "blocked", "changes_requested"} for job in jobs),
+                "queued_jobs": sum(job["state"] == "queued" for job in jobs),
                 "runner": self._runner_status(project),
+                "running_jobs": sum(job["state"] in {"running", "retryable"} for job in jobs),
                 "slot_busy": any(job["state"] in {"queued", "running", "retryable"} for job in jobs),
             },
             "manager_skill": _manager_skill_path(),
@@ -459,6 +462,7 @@ class DashboardAdapter:
         "question.defer": {"deferred_until", "question_id", "reason", "request_id"},
         "question.reopen": {"question_id", "reason", "request_id"},
         "question.close": {"question_id", "reason", "request_id"},
+        "project.runner": {"request_id", "runner"},
     }
 
     def __init__(
@@ -608,6 +612,12 @@ class DashboardAdapter:
             )
         request_id = _optional_string(payload.get("request_id"), "request_id")
         _, workspace = self._project_context(slug)
+        if command == "project.runner":
+            return RuntimeManager(workspace).set_runner(
+                slug,
+                _required_string(payload.get("runner"), "runner"),
+                actor=self.actor,
+            )
         member = MemberWorkflow(workspace)
         discovery = IMContextWorkflow(workspace)
         if command == "task.create":
@@ -689,12 +699,13 @@ class DashboardAdapter:
         self._require_write_actor(request_actor)
         if not isinstance(payload, dict):
             raise TeamRuntimeError("E_USAGE", "Dashboard command body must be an object.")
-        unknown = sorted(set(payload) - {"name", "workspace"})
+        unknown = sorted(set(payload) - {"name", "runner", "workspace"})
         if unknown:
             raise TeamRuntimeError(
                 "E_USAGE", "Dashboard command contains unknown fields.", {"fields": unknown}
             )
         name = _required_string(payload.get("name"), "name")
+        runner = _optional_string(payload.get("runner"), "runner")
         workspace = self._absolute_directory(
             _required_string(payload.get("workspace"), "workspace")
         )
@@ -714,7 +725,7 @@ class DashboardAdapter:
         _ensure_git_repository(workspace)
         actor_id = self.actor.split(":", 1)[1] if self.actor else None
         result = RuntimeManager(workspace).init_project(
-            name, active_manager_id=actor_id
+            name, active_manager_id=actor_id, runner=runner
         )
         project = result["project"]
         register_home_project(
@@ -732,6 +743,36 @@ class DashboardAdapter:
             },
             "schema_version": SCHEMA_VERSION,
         }
+
+    def platform_agents(self, *, request_actor: str | None = None) -> dict[str, Any]:
+        """Best-effort local probes: is each headless agent CLI installed and
+        signed in? File/keychain checks only — nothing talks to a network."""
+        self._require_write_actor(request_actor)
+        home = Path.home()
+        claude_signed = bool(
+            os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
+            or os.environ.get("ANTHROPIC_API_KEY")
+        ) or (home / ".claude" / ".credentials.json").is_file()
+        if not claude_signed and sys.platform == "darwin":
+            probe = subprocess.run(
+                ["security", "find-generic-password", "-s", "Claude Code-credentials"],
+                capture_output=True,
+                text=True,
+            )
+            claude_signed = probe.returncode == 0
+        agents = {
+            "claude-code": {
+                "cli": shutil.which("claude") is not None,
+                "login_hint": "claude setup-token",
+                "signed_in": claude_signed,
+            },
+            "codex": {
+                "cli": shutil.which("codex") is not None,
+                "login_hint": "codex login",
+                "signed_in": (home / ".codex" / "auth.json").is_file(),
+            },
+        }
+        return {"agents": agents, "ok": True, "schema_version": SCHEMA_VERSION}
 
     def platform_folders(self, *, request_actor: str | None = None) -> dict[str, Any]:
         self._require_write_actor(request_actor)
@@ -863,6 +904,10 @@ def dashboard_handler(
             try:
                 if path == "/api/bootstrap":
                     self._json(HTTPStatus.OK, adapter.bootstrap())
+                    return
+                if path == "/api/platform/agents":
+                    self._json(HTTPStatus.OK, adapter.platform_agents(
+                        request_actor=self.headers.get("X-Orbital-Actor")))
                     return
                 if path == "/api/platform/folders":
                     self._json(HTTPStatus.OK, adapter.platform_folders(

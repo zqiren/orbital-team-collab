@@ -23,8 +23,10 @@ from .errors import TeamRuntimeError
 from .models import Event
 from .paths import RuntimePaths, resolve_runtime_paths
 from .schema import validate
+from .runners import find_runner_manifest
 from .storage import (
     EventLog,
+    ProjectStore,
     RegistryStore,
     RuntimeLock,
     atomic_write_json,
@@ -197,6 +199,7 @@ class RuntimeManager:
         *,
         seed: str | os.PathLike[str] | None = None,
         active_manager_id: str | None = None,
+        runner: str | None = None,
     ) -> dict[str, Any]:
         display_name = name.strip()
         if not display_name or len(display_name) > 80:
@@ -207,6 +210,8 @@ class RuntimeManager:
         seed_manifest, seed_stores = self._read_seed(seed, slug)
         if active_manager_id is not None:
             seed_manifest["active_manager_id"] = active_manager_id
+        if runner is not None:
+            seed_manifest["runner"] = self._validated_runner(runner)
         try:
             self._create_layout()
         except OSError as exc:
@@ -329,6 +334,55 @@ class RuntimeManager:
             )
         self._load_marker()
         return RegistryStore(self.paths.runtime_root).read()
+
+    def _validated_runner(
+        self, runner: str, canonical_workspace: str | os.PathLike[str] | None = None
+    ) -> str:
+        if not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", runner):
+            raise TeamRuntimeError("E_USAGE", "Runner name is invalid.")
+        canonical = canonical_workspace or self.paths.repository_root
+        if runner != "manual" and find_runner_manifest(runner, canonical) is None:
+            raise TeamRuntimeError(
+                "E_RUNNER_UNAVAILABLE",
+                "No runner manifest matches the requested runner.",
+                {"runner": runner},
+            )
+        return runner
+
+    def set_runner(
+        self, project_query: str, runner: str, *, actor: str = "human:default-manager"
+    ) -> dict[str, Any]:
+        registry = self._registry()
+        registration = self._resolve_registration(registry, project_query)
+        slug = registration["slug"]
+        store = ProjectStore(self.paths.runtime_root, slug, "project.json", "project")
+        current = store.read()
+        validated = self._validated_runner(runner, current["canonical_workspace"])
+        if current["runner"] == validated:
+            return {"ok": True, "project": current, "schema_version": SCHEMA_VERSION}
+
+        def transform(project: dict[str, Any]) -> dict[str, Any]:
+            project["runner"] = validated
+            project["revision"] = project["revision"] + 1
+            return project
+
+        project = store.update(transform)
+        timestamp = utc_now()
+        EventLog(self.paths.runtime_root).append(
+            Event(
+                actor=actor,
+                data={"runner": validated},
+                id=stable_uuid4(
+                    f"orbital-team:project.runner_changed:{slug}:{timestamp}:{validated}:{project['revision']}"
+                ),
+                idempotency_key=f"project:runner:{slug}:{project['revision']}",
+                project_slug=slug,
+                schema_version=SCHEMA_VERSION,
+                timestamp=timestamp,
+                type="project.runner_changed",
+            )
+        )
+        return {"ok": True, "project": project, "schema_version": SCHEMA_VERSION}
 
     @staticmethod
     def _resolve_registration(
