@@ -2,6 +2,15 @@
 
 > 把“一个人与一个 coding agent 的 session”升级为“一个团队与多个异构 agent 共同维护的 Project”。
 
+## 📌 主要产物 / Primary Deliverable
+
+**评估请从这里开始：[Team Collab 设计书（`DESIGN.html`）](./DESIGN.html)** —— 设计理念、为什么必须是专职
+management agent、概念模型与系统架构、本地 demo 与云端生产形态、现状校准表与路线图，全部在这一份文档里。
+
+GitHub 不直接渲染 HTML：可[在线预览](https://htmlpreview.github.io/?https://github.com/zqiren/orbital-team-collab/blob/main/DESIGN.html)，
+或 clone 后用浏览器直接打开 `DESIGN.html`。本仓库是该设计的**本地可运行 demo**（生产形态为云端团队空间 +
+云端 management agent，见设计书第 07 节）。
+
 ## 30 秒电梯陈述
 
 Orbital、Claude Code 和 Codex 都擅长提升个人编码效率，但项目事实仍容易困在某个人的
@@ -103,7 +112,9 @@ python3 demo/scripts/team_demo.py reset --root "$DEMO_ROOT"
 Dashboard 仍是共享 runtime 的 loopback projection 加受控 Human 写入口；前端遵循 Orbital 的
 设计语言（三级 surface ladder、azure accent、Geist 字型栈），信息层级为：
 
-- 左侧项目列表 → 项目页顶部 Agents 实时状态条：谁在做哪个任务、Manager 是否在集成。
+- 左侧项目列表与「+ New project」：选择任意本地文件夹一键建项目（内置文件夹浏览器与最近使用；非 Git
+  文件夹自动 `git init` 并提交现有内容；守护进程随项目自动启动）；跨文件夹项目注册表存于
+  `~/.orbital-team/projects.json`，Manager 状态徽标常驻页头（空闲 / N 排队等待 / 集成中）。
 - **看板**：六列状态投影（待办/就绪/进行中/审核中/已阻塞/已完成）。人类唯一合法操作是把
   「待办」草稿拖入「就绪」释放给 agent 认领（等价 `task.ready`）；点击卡片打开详情抽屉
   （描述、验收标准、Report 验证证据、集成任务、阻塞问题）。其余流转全部由 Member/Manager
@@ -112,10 +123,11 @@ Dashboard 仍是共享 runtime 的 loopback projection 加受控 Human 写入口
   行内输入答案。
 - **文件**：canonical 工作区的只读文件树与预览（`orbital/` 项目记忆高亮、懒加载、
   64KB 截断、路径逃逸/symlink/.git 防护）。
-- Agents 条上的「+ Add member」按输入的成员 ID 生成可复制注册命令（`git worktree add` →
-  `teamctl member join` → member adapter 安装）；注册后该 worktree 中的 Claude Code 会话
-  即获得 `/team claim|start|report|block|status|questions|manager` 语法，身份始终来自
-  worktree 绑定。
+- **设置**：成员名册（实时状态、分支、加入时间）与两类一键复制的接入消息——成员 agent 消息贴入任意
+  agent 会话即自动建 worktree、`teamctl member join` 绑定身份、安装 `/team` 指令集并向用户简报用法；
+  管理 agent 消息用于 manual 模式的交互式驾驶。Manager runner 可选 manual / claude-code / codex
+  （含本机 CLI 安装与登录探测，headless 运行复用已有登录），守护进程（teamd）一键启停、随项目
+  创建自动启动，且不随面板关闭而停止。
 - 界面支持 English / 中文 切换（localStorage 持久化，zh* 浏览器默认中文）。
 
 ## Runner 与 replay

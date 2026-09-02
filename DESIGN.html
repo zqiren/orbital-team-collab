@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<title>Team Collab 设计书</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #F7F8F6;
+    --card: #FFFFFF;
+    --ink: #1C2B33;
+    --muted: #5C6B70;
+    --line: #D9DFDC;
+    --accent: #0E7C66;
+    --accent-soft: #E3F0EC;
+    --warn: #9A6B15;
+    --warn-soft: #F6EEDD;
+    --mono-bg: #EEF1EF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #131A1C;
+      --card: #1B2427;
+      --ink: #E4EAE7;
+      --muted: #96A5A1;
+      --line: #2C3A3D;
+      --accent: #46B294;
+      --accent-soft: #1E3530;
+      --warn: #D2A24C;
+      --warn-soft: #33301F;
+      --mono-bg: #212C2F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #131A1C;
+    --card: #1B2427;
+    --ink: #E4EAE7;
+    --muted: #96A5A1;
+    --line: #2C3A3D;
+    --accent: #46B294;
+    --accent-soft: #1E3530;
+    --warn: #D2A24C;
+    --warn-soft: #33301F;
+    --mono-bg: #212C2F;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    font-size: 15px;
+    line-height: 1.85;
+    margin: 0;
+  }
+  .page { max-width: 760px; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
+
+  .kicker {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 1rem;
+  }
+  h1 {
+    font-family: "Noto Serif SC", serif;
+    font-weight: 700;
+    font-size: clamp(30px, 5vw, 42px);
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+    margin: 0 0 1.2rem;
+    text-wrap: balance;
+  }
+  .lede {
+    font-size: 17px;
+    color: var(--muted);
+    max-width: 40em;
+    margin: 0 0 0.8rem;
+  }
+  .meta {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
+    padding-top: 0.9rem;
+    margin-top: 2.2rem;
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  section { margin-top: 4.2rem; }
+  .sec-label {
+    display: flex;
+    align-items: baseline;
+    gap: 0.9rem;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.6rem;
+  }
+  .sec-num {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13px;
+    color: var(--accent);
+  }
+  h2 {
+    font-family: "Noto Serif SC", serif;
+    font-weight: 700;
+    font-size: 24px;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h3 {
+    font-family: "Noto Sans SC", sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    margin: 2.2rem 0 0.6rem;
+  }
+  p { margin: 0 0 1rem; max-width: 44em; }
+  ul, ol { margin: 0 0 1rem; padding-left: 1.4em; max-width: 42em; }
+  li { margin-bottom: 0.45rem; }
+  li::marker { color: var(--accent); }
+  strong { font-weight: 700; }
+  em { font-style: normal; color: var(--accent); font-weight: 500; }
+
+  code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.86em;
+    background: var(--mono-bg);
+    border-radius: 4px;
+    padding: 0.1em 0.4em;
+  }
+
+  .thesis {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 1.3rem 1.5rem;
+    margin: 1.6rem 0;
+  }
+  .thesis p { margin: 0; }
+  .thesis p + p { margin-top: 0.7rem; }
+
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.4rem 0; }
+  @media (max-width: 620px) { .pair { grid-template-columns: 1fr; } }
+  .pair .cell {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1.1rem 1.25rem;
+  }
+  .cell .cell-tag {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+  .cell.ours .cell-tag { color: var(--accent); }
+  .cell p { font-size: 14px; margin: 0; color: var(--ink); }
+
+  dl.ctx { margin: 1.4rem 0; }
+  dl.ctx > div {
+    display: grid;
+    grid-template-columns: 9.5em 1fr;
+    gap: 1.2rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  @media (max-width: 560px) { dl.ctx > div { grid-template-columns: 1fr; gap: 0.2rem; } }
+  dl.ctx dt { font-weight: 700; margin: 0; }
+  dl.ctx dt small {
+    display: block;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+  dl.ctx dd { margin: 0; color: var(--ink); font-size: 14px; max-width: 40em; }
+
+  figure { margin: 2rem 0; }
+  .fig-frame {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1.2rem;
+    overflow-x: auto;
+  }
+  figure svg { display: block; max-width: 100%; height: auto; min-width: 620px; margin: 0 auto; color: var(--ink); }
+  figcaption {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 0.7rem;
+    max-width: 46em;
+  }
+  figcaption b { color: var(--ink); }
+
+  ol.journey { counter-reset: step; list-style: none; padding: 0; max-width: 46em; }
+  ol.journey li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 2.2em 1fr;
+    gap: 0.9rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--line);
+    margin: 0;
+  }
+  ol.journey li::before {
+    content: counter(step, decimal-leading-zero);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13px;
+    color: var(--accent);
+    padding-top: 0.15em;
+  }
+  ol.journey b { display: block; }
+  ol.journey span { font-size: 14px; color: var(--muted); }
+
+  .tablewrap { overflow-x: auto; margin: 1.4rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 560px; }
+  th, td { text-align: left; padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  td:first-child { font-weight: 700; white-space: nowrap; }
+  .pill {
+    display: inline-block;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    border-radius: 999px;
+    padding: 0.12em 0.7em;
+    white-space: nowrap;
+  }
+  .pill.done { background: var(--accent-soft); color: var(--accent); }
+  .pill.gap { background: var(--warn-soft); color: var(--warn); }
+
+  .scenario {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1.3rem 1.5rem;
+    margin: 1.4rem 0;
+    font-size: 14px;
+  }
+  .scenario p { margin: 0 0 0.7rem; }
+  .scenario p:last-child { margin: 0; }
+
+  footer {
+    margin-top: 5rem;
+    border-top: 1px solid var(--line);
+    padding-top: 1rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  a { color: var(--accent); }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="page">
+  <header>
+    <p class="kicker">Design Proposal · Team Collab</p>
+    <h1>让每个 agent 的上下文，<br>沉淀成团队可复用的资产</h1>
+    <p class="lede">团队里的 agent 各自聪明，却在上下文孤岛中工作。Team Collab 以项目为单位打通上下文，用一个专职的 management agent 把讨论、产物、代办与决策维护成一份活的团队记忆——任何 agent 接入即用，用完反哺。</p>
+    <div class="meta">
+      <span>版本 v1.0 · 2026-09-02</span>
+      <span>状态：核心闭环已在本地 demo 中实现并端到端验证</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-label"><span class="sec-num">01</span><h2>要解决的痛点：上下文孤岛</h2></div>
+    <p>一个团队里往往同时运行着许多 agent 会话：有人在做调研，有人在整理需求，有人在产出文稿。每个 agent 的输入、过程与产物，都锁在<strong>各自隔离的会话与存储</strong>里。于是团队只能退回到最低效的对齐方式——开会、写文档、口口相传，让人肉充当 agent 之间的总线。</p>
+    <p>结果是双重浪费：agent 做过的调研没人能复用，团队已有的结论 agent 也看不见。<strong>智能在增长，团队记忆没有。</strong></p>
+  </section>
+
+  <section>
+    <div class="sec-label"><span class="sec-num">02</span><h2>为什么现有知识库救不了它</h2></div>
+    <p>Wiki、Notion、Obsidian 库当然可以承载团队知识。但它们几乎都会走向同一个结局：维护成本高，堆满没人删的旧页面，更新永远滞后于事实。<strong>知识库死掉，不是因为工具不好，而是因为没有人对它的「活性」负全责，也没有一条让知识自动生长的路径。</strong></p>
+    <div class="pair">
+      <div class="cell">
+        <div class="cell-tag">静态知识库</div>
+        <p>知识靠人手工搬运进去；只增不删；没有生命周期；写下来的那一刻开始过期；与工作流断开，用的人越来越少。</p>
+      </div>
+      <div class="cell ours">
+        <div class="cell-tag">Team Collab 的回答</div>
+        <p>知识由工作流<strong>自动产出</strong>：每一次任务合并都触发一次知识编译；有专职的 management agent 负责<strong>替换过期事实</strong>而非追加流水账；项目边界天然限定了「什么相关、什么重要」。</p>
+      </div>
+    </div>
+    <p>换句话说，我们不是再造一个更好的笔记工具，而是给团队上下文配一个<em>全职维护者</em>：一个以项目为单位、统一管理项目代办、产物沉淀与讨论结论的 management agent。任何 agent 都可以接入项目上下文，基于已有积累开展工作，再把成果反哺回来。</p>
+  </section>
+
+  <section>
+    <div class="sec-label"><span class="sec-num">03</span><h2>三个核心理念</h2></div>
+    <div class="thesis">
+      <p><strong>团队上下文是最重要的资产。</strong>它长在项目文件夹里、进 Git 版本管理，不属于任何一个 agent 会话，也不会随会话关闭而蒸发。</p>
+      <p><strong>Agent 只是智能插件。</strong>Claude Code、Codex 或任何 CLI agent，装上插件即可接入项目空间；换 agent 不丢上下文，多 agent 共享同一份记忆。</p>
+      <p><strong>Management agent 是上下文的维护者。</strong>它不抢工作，只做三件事：把讨论沉淀为代办与知识、守卫式地合并成员产出、把合并结果编译进团队记忆并淘汰过期事实。</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label"><span class="sec-num">04</span><h2>为什么必须是专职的 management agent</h2></div>
+    <p>一个自然的反问是：能不能省掉这个角色，让每个成员 agent 完成任务后「顺手」维护团队知识？不能。四个理由：</p>
+    <ol>
+      <li><strong>竞态问题难解决。</strong>多个成员 agent 并发编译同一份团队知识，必然出现相互覆盖、丢失或错乱——这是分布式写入的经典问题，靠约定解决不了。专职 management agent 把知识变更收敛为<em>单一写入者</em>，天然串行化。实现印证：知识只接受 management agent 的全文件提案，且带基线哈希校验，任何并发修改被判为过期而非被静默覆盖。</li>
+      <li><strong>IM always-on 的上下文收集。</strong>讨论沉淀需要一个常驻、跨会话的角色持续监听群聊、按项目目的持续提炼。成员 agent 是任务生命周期内的临时会话，任务结束即消失，没有资格、也没有生命周期承担 always-on 职责。</li>
+      <li><strong>维护触发的稳定性。</strong>团队知识的沉淀不能寄希望于「每个成员 agent 都记得做、都做得对」。两层保证：其一，<em>触发确定</em>——影响团队知识的 merge 由守护进程按事件强制进入知识编译阶段，一次都不会漏；其二，<em>行为确定</em>——management agent 的 system prompt 与工具面由系统统一下发，不需要赌各家成员 agent 的 prompt 是否遵守编译契约。尤其是长任务之后，成员 agent 自身可能已经 context rot，此时让它编译团队记忆，是在用团队最重要的资产冒险；而 management agent 每次都是短生命周期、全新上下文、重读事实源的运行，不携带任何腐化状态。</li>
+      <li><strong>更好的权限管控。</strong>成员 agent 无需持有团队记忆的写权限——写路径唯一、身份绑定、全程事件留痕，审计、回滚、审批都收敛在一条通道上。把写权限散给每个成员 agent，等于放弃对核心资产的治理。</li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="sec-label"><span class="sec-num">05</span><h2>概念模型：项目粒度 × 四类上下文</h2></div>
+    <p><strong>为什么以项目为粒度？</strong>项目天然自带目的、边界与生命周期。这三样东西正是 management agent 判断「哪些上下文相关、哪些重要、哪些该淘汰」的依据——脱离项目谈知识管理，就回到了堆文档的老路。</p>
+    <p>项目内的上下文分为四类，各有明确的来源与去向：</p>
+    <dl class="ctx">
+      <div>
+        <dt>讨论<small>Discussions → Inbox</small></dt>
+        <dd>原始材料，发生在 IM 群聊里。由沉淀 agent（用户触发或定时）按项目目的提炼成候选任务与问题，带原文引用与置信度进入收件箱，经人分诊后才生效——类似自动生成的会议纪要，但直接接入工作流。</dd>
+      </div>
+      <div>
+        <dt>知识<small>Knowledge</small></dt>
+        <dd>agent 与用户沉淀的结论性产物：项目现状、已定决策、可复用的经验教训与资产索引。是每个新任务的背景与参考，由 management agent 在每次合并后编译维护，<strong>替换过期事实而非无限追加</strong>。</dd>
+      </div>
+      <div>
+        <dt>代办<small>Tasks</small></dt>
+        <dd>团队共有的待办事项。有完整状态机（草稿 → 就绪 → 认领 → 进行中 → 已提交 → 集成中 → 完成），原子认领防止撞车，全team可见。</dd>
+      </div>
+      <div>
+        <dt>开放问题<small>Open Questions</small></dt>
+        <dd>需要团队共同智慧或隐藏上下文才能回答的地方。可以阻塞相关任务与集成；management agent 审阅时遇到需要人类判断的决策，也会主动开一个问题并暂停合并，而不是擅自决定。</dd>
+      </div>
+    </dl>
+
+    <figure>
+      <div class="fig-frame">
+        <svg viewBox="0 0 880 330" role="img" aria-label="上下文循环：IM 讨论经沉淀进入收件箱，分诊为代办；成员 agent 认领执行后提交报告；management agent 守卫合并并编译知识；知识作为背景反哺新任务；开放问题在需要人类判断处阻塞并等待回答。">
+        <defs>
+          <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0L10 5L0 10z" fill="currentColor"/>
+          </marker>
+          <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0L10 5L0 10z" fill="var(--accent)"/>
+          </marker>
+        </defs>
+        <g fill="none" stroke="currentColor" stroke-width="1.3">
+          <rect x="16" y="96" width="120" height="58" rx="6"/>
+          <rect x="196" y="96" width="120" height="58" rx="6"/>
+          <rect x="376" y="96" width="120" height="58" rx="6"/>
+          <rect x="556" y="96" width="120" height="58" rx="6"/>
+          <rect x="736" y="88" width="128" height="74" rx="6" stroke="var(--accent)" stroke-width="2"/>
+          <rect x="376" y="236" width="120" height="58" rx="6"/>
+        </g>
+        <g font-family="'Noto Sans SC',sans-serif" font-size="13" fill="currentColor" text-anchor="middle">
+          <text x="76" y="120">IM 讨论</text>
+          <text x="76" y="140" font-size="11" opacity="0.65">群聊原始材料</text>
+          <text x="256" y="120">收件箱</text>
+          <text x="256" y="140" font-size="11" opacity="0.65">候选任务 · 分诊</text>
+          <text x="436" y="120">代办</text>
+          <text x="436" y="140" font-size="11" opacity="0.65">团队任务池</text>
+          <text x="616" y="120">成员执行</text>
+          <text x="616" y="140" font-size="11" opacity="0.65">worktree · 报告</text>
+          <text x="800" y="115" fill="var(--accent)" font-weight="bold">团队知识</text>
+          <text x="800" y="135" font-size="11" opacity="0.75">现状 · 决策</text>
+          <text x="800" y="151" font-size="11" opacity="0.75">经验 · 索引</text>
+          <text x="436" y="260">开放问题</text>
+          <text x="436" y="280" font-size="11" opacity="0.65">需要人的判断</text>
+        </g>
+        <g stroke="currentColor" stroke-width="1.3" fill="none">
+          <line x1="136" y1="125" x2="192" y2="125" marker-end="url(#a1)"/>
+          <line x1="316" y1="125" x2="372" y2="125" marker-end="url(#a1)"/>
+          <line x1="496" y1="125" x2="552" y2="125" marker-end="url(#a1)"/>
+        </g>
+        <g stroke="var(--accent)" stroke-width="1.6" fill="none">
+          <line x1="676" y1="125" x2="732" y2="125" marker-end="url(#a2)"/>
+          <path d="M800 166 C 800 218 620 218 500 210 C 470 208 450 200 442 160" marker-end="url(#a2)"/>
+        </g>
+        <g stroke="currentColor" stroke-width="1.1" stroke-dasharray="5 4" fill="none">
+          <path d="M300 154 C 330 210 360 245 372 258" marker-end="url(#a1)"/>
+          <path d="M496 265 C 560 260 600 200 612 158" marker-end="url(#a1)"/>
+        </g>
+        <g font-family="'IBM Plex Mono',monospace" font-size="10.5" fill="currentColor">
+          <text x="140" y="112" opacity="0.7">沉淀</text>
+          <text x="320" y="112" opacity="0.7">提升</text>
+          <text x="500" y="112" opacity="0.7">认领</text>
+          <text x="682" y="103" fill="var(--accent)">守卫合并+编译</text>
+          <text x="600" y="230" fill="var(--accent)">作为新任务的背景</text>
+          <text x="296" y="215" opacity="0.7">转为问题</text>
+          <text x="536" y="240" opacity="0.7">回答后解锁</text>
+        </g>
+        </svg>
+      </div>
+      <figcaption><b>图 1 · 上下文循环。</b>四类上下文不是四个抽屉，而是一条闭环：讨论进，知识出，知识再作为下一轮工作的输入。绿色环节是 management agent 的职责；虚线是开放问题的旁路——阻塞在需要人类判断的地方，回答后自动解锁。</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-label"><span class="sec-num">06</span><h2>系统设计</h2></div>
+
+    <h3>存储：一切长在项目文件夹里</h3>
+    <p>一个项目 = 一个本地文件夹 + 一个 Git 仓库。知识文件（<code>orbital/PROJECT_STATE.md</code>、<code>DECISIONS.md</code>、<code>LESSONS.md</code>、<code>INDEX.md</code>）与工作产物一起进版本管理，随仓库携带与迁移；任务、问题、收件箱、事件日志等运行时状态存放在 <code>.git/orbital-team/</code>，同一仓库的所有 worktree 天然共享，且永不外发。没有数据库，没有云端依赖——<strong>上下文的物理形态就是文件</strong>，任何工具都能读。</p>
+
+    <h3>角色：成员 agent 与 management agent 的分工</h3>
+    <ul>
+      <li><strong>成员 agent</strong>：身份绑定在独立 worktree 上（分支 <code>member/&lt;id&gt;</code>），认领任务、在自己的分支上工作、提交带验证证据的报告。成员从不直接 merge、从不直接改团队记忆。</li>
+      <li><strong>Management agent</strong>：唯一的合并者与知识维护者。审阅报告 → 守卫式 merge（或退回修改、或阻塞并开问题）→ 将合并结果编译为知识提案 → 校验后落库。全程只能通过受控命令改变状态，哈希守卫防止覆盖并发修改。</li>
+      <li><strong>守护进程（daemon）</strong>：监听事件，把已提交的报告转为集成任务；对无头模式的项目自动唤起 management agent（Claude Code / Codex 无头运行，复用本机已有登录，一次登录全局生效）。管理面板一键启停，也可完全手动驾驶。</li>
+    </ul>
+
+    <h3>接入：任何 agent，装插件即入场</h3>
+    <p>从管理面板复制一条接入消息，粘贴到任意 agent 会话：agent 自动建立 worktree、绑定成员身份、安装 <code>/team</code> 指令集，然后向用户简报工作方式。对不支持插件的 agent，提供等价的中立 CLI（<code>teamctl</code>）——<strong>协议在文件与命令层，不在某家 agent 里</strong>。</p>
+
+    <figure>
+      <div class="fig-frame">
+        <svg viewBox="0 0 880 400" role="img" aria-label="系统架构：多个成员 agent 在各自 worktree 中通过插件读写项目运行时；management agent 由守护进程唤起，对项目文件夹执行守卫合并与知识编译；管理面板通过本机回环端口提供只读投影与受控命令。">
+        <defs>
+          <marker id="b1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0L10 5L0 10z" fill="currentColor"/>
+          </marker>
+          <marker id="b2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0L10 5L0 10z" fill="var(--accent)"/>
+          </marker>
+        </defs>
+        <g fill="none" stroke="currentColor" stroke-width="1.3">
+          <rect x="20" y="60" width="180" height="64" rx="6"/>
+          <rect x="20" y="150" width="180" height="64" rx="6"/>
+          <rect x="20" y="240" width="180" height="64" rx="6"/>
+          <rect x="330" y="52" width="240" height="300" rx="8" stroke-width="1.6"/>
+          <rect x="352" y="96" width="196" height="104" rx="6" stroke-dasharray="5 4"/>
+          <rect x="352" y="224" width="196" height="104" rx="6"/>
+          <rect x="680" y="88" width="184" height="96" rx="6" stroke="var(--accent)" stroke-width="2"/>
+          <rect x="680" y="236" width="184" height="72" rx="6"/>
+        </g>
+        <g font-family="'Noto Sans SC',sans-serif" font-size="13" fill="currentColor">
+          <text x="110" y="86" text-anchor="middle">Claude Code + 插件</text>
+          <text x="110" y="106" text-anchor="middle" font-size="11" opacity="0.65">worktree · member/alice</text>
+          <text x="110" y="176" text-anchor="middle">Codex + 插件</text>
+          <text x="110" y="196" text-anchor="middle" font-size="11" opacity="0.65">worktree · member/bob</text>
+          <text x="110" y="266" text-anchor="middle">任意 agent + CLI</text>
+          <text x="110" y="286" text-anchor="middle" font-size="11" opacity="0.65">worktree · member/carol</text>
+          <text x="450" y="80" text-anchor="middle" font-weight="bold">项目文件夹（Git 仓库）</text>
+          <text x="450" y="122" text-anchor="middle" font-size="12">运行时 .git/orbital-team/</text>
+          <text x="450" y="144" text-anchor="middle" font-size="11" opacity="0.65">代办 · 问题 · 收件箱</text>
+          <text x="450" y="162" text-anchor="middle" font-size="11" opacity="0.65">报告 · 事件日志</text>
+          <text x="450" y="185" text-anchor="middle" font-size="10.5" opacity="0.55" font-family="'IBM Plex Mono',monospace">本机私有，不进版本库</text>
+          <text x="450" y="252" text-anchor="middle" font-size="12">代码与产物 + orbital/ 知识</text>
+          <text x="450" y="274" text-anchor="middle" font-size="11" opacity="0.65">现状 · 决策 · 经验 · 索引</text>
+          <text x="450" y="297" text-anchor="middle" font-size="10.5" opacity="0.55" font-family="'IBM Plex Mono',monospace">进 Git，随仓库携带</text>
+          <text x="772" y="114" text-anchor="middle" fill="var(--accent)" font-weight="bold">Management Agent</text>
+          <text x="772" y="136" text-anchor="middle" font-size="11" opacity="0.75">审阅 · 守卫合并 · 知识编译</text>
+          <text x="772" y="154" text-anchor="middle" font-size="11" opacity="0.75">阻塞时开问题给人</text>
+          <text x="772" y="172" text-anchor="middle" font-size="10.5" opacity="0.6" font-family="'IBM Plex Mono',monospace">daemon 按事件唤起</text>
+          <text x="772" y="262" text-anchor="middle">管理面板</text>
+          <text x="772" y="282" text-anchor="middle" font-size="11" opacity="0.65">看板 · 收件箱 · 问题</text>
+          <text x="772" y="298" text-anchor="middle" font-size="11" opacity="0.65">文件 · 动态 · 设置</text>
+        </g>
+        <g stroke="currentColor" stroke-width="1.2" fill="none">
+          <line x1="200" y1="92" x2="326" y2="120" marker-end="url(#b1)"/>
+          <line x1="200" y1="182" x2="326" y2="182" marker-end="url(#b1)"/>
+          <line x1="200" y1="272" x2="326" y2="240" marker-end="url(#b1)"/>
+          <line x1="676" y1="272" x2="574" y2="240" marker-end="url(#b1)"/>
+        </g>
+        <g stroke="var(--accent)" stroke-width="1.6" fill="none">
+          <line x1="676" y1="136" x2="574" y2="160" marker-end="url(#b2)"/>
+        </g>
+        <g font-family="'IBM Plex Mono',monospace" font-size="10.5" fill="currentColor">
+          <text x="216" y="112" opacity="0.7">认领 / 报告</text>
+          <text x="238" y="174" opacity="0.7">/team</text>
+          <text x="216" y="268" opacity="0.7">teamctl</text>
+          <text x="586" y="128" fill="var(--accent)">受控 merge + 编译</text>
+          <text x="580" y="266" opacity="0.7">回环端口 · 只读投影</text>
+        </g>
+        </svg>
+      </div>
+      <figcaption><b>图 2 · 系统架构。</b>项目文件夹是唯一的事实来源：运行时状态本机私有，知识与产物进 Git。成员 agent 从左侧接入只能认领与报告；绿色箭头是系统里唯一有权变更团队记忆的通道——management agent 的受控合并与知识编译。</figcaption>
+    </figure>
+
+    <h3>守卫机制：为什么这份记忆烂不掉</h3>
+    <ul>
+      <li><strong>只有一个写入者。</strong>团队记忆只接受 management agent 的全文件提案，且带基线哈希校验——并发修改会被识别为过期而非被覆盖。</li>
+      <li><strong>知识有淘汰纪律。</strong>编译契约明确要求：现状文件只保留当下为真的事实，替换过期内容，禁止追加流水账；决策要有依据，经验要可复用、要去重。</li>
+      <li><strong>人保留裁决权。</strong>互相矛盾的结论、缺失授权的决策，一律阻塞并转为开放问题，等人回答后再继续——管理 agent 从不替团队拍板。</li>
+      <li><strong>面板只在本机回环端口服务</strong>，写操作绑定启动时声明的身份，请求来源经校验，运行日志永不离开本机。</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-label"><span class="sec-num">07</span><h2>部署形态：本地 demo 与云端生产形态</h2></div>
+    <p><strong>当前仓库是一个本地 demo</strong>：单机、文件运行时、回环管理面板。它的使命是验证协议与闭环——四类上下文、守卫合并、知识编译、插件接入，这些已全部跑通。生产级的做法是云端化，包含两个托管组件：</p>
+    <div class="pair">
+      <div class="cell">
+        <div class="cell-tag">云端团队空间</div>
+        <p>托管的项目上下文——任务、问题、收件箱、知识与产物存储。团队成员经身份认证接入，不再依赖某台机器的文件系统；跨时区、跨设备共享同一份项目状态。</p>
+      </div>
+      <div class="cell ours">
+        <div class="cell-tag">云端 Management Agent</div>
+        <p>常驻托管运行：always-on 收集 IM 讨论，按事件即时执行守卫合并与知识编译——不依赖任何人的笔记本开机，服务可用性由平台保证。</p>
+      </div>
+    </div>
+    <p>迁移路径是平滑的：本地 demo 已经把上下文物化为文件、把状态变更收敛为受控命令，<strong>云端化 = 替换存储层与 runner 宿主，概念模型与协议不变</strong>。成员 agent 仍在各自的本地环境工作，通过同一套协议与云端空间交互；本地模式保留为离线 / 私有化选项。</p>
+  </section>
+
+  <section>
+    <div class="sec-label"><span class="sec-num">08</span><h2>用户旅程</h2></div>
+    <ol class="journey">
+      <li><div><b>建项目</b><span>在管理面板选择任意本地文件夹新建项目；非 Git 文件夹自动初始化，守护进程随项目自动启动。</span></div></li>
+      <li><div><b>接入成员</b><span>复制成员接入消息，粘贴进任意 agent 会话；agent 自建 worktree、绑定身份，并向成员简报工作方式。</span></div></li>
+      <li><div><b>喂入讨论</b><span>群聊记录经沉淀进入收件箱，人分诊后提升为代办或转为问题。</span></div></li>
+      <li><div><b>认领与执行</b><span>成员 agent 以团队知识为背景认领任务，在自己的 worktree 里工作、本地提交。</span></div></li>
+      <li><div><b>提交报告</b><span>完成后提交结构化报告：摘要、验证证据、风险与知识候选。</span></div></li>
+      <li><div><b>守卫合并</b><span>management agent 被自动唤起：审阅 → 合并 / 退回 / 阻塞提问。产物进入团队主干。</span></div></li>
+      <li><div><b>知识沉淀</b><span>合并结果被编译进团队记忆，过期事实被替换；下一个任务、下一个 agent，从更新后的上下文出发。</span></div></li>
+    </ol>
+    <div class="scenario">
+      <p><strong>以投行尽调为例。</strong>群里讨论「目标公司的关联交易要再核一遍」，沉淀 agent 将其提炼为候选任务进入收件箱；负责人分诊后设为就绪。分析师的 agent 认领任务，先读团队知识——上一轮已核实的股权结构、已定的口径决策——然后只做增量核查，提交带来源引用的报告。management agent 审阅时发现两份材料对同一笔交易金额记载不一致，于是阻塞合并、开出问题：「以年报口径还是尽调底稿口径为准？」合伙人在面板上一句话拍板，集成自动继续，结论与口径决策一并写入团队记忆。<strong>下一位接手的同事（或 agent），直接站在这份记忆之上。</strong>管理咨询、法律文书、政策研究等文本密集型协作，同理。</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label"><span class="sec-num">09</span><h2>现状校准：设计 vs 实现</h2></div>
+    <p>以下对照当前代码库逐项核对。核心闭环——代办、问题、知识编译、守卫合并、插件接入、管理面板——已实现并经端到端实测（包括无头 management agent 在真实项目上审阅报告、主动阻塞并向人提问的完整链路）。</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>设计点</th><th>状态</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>项目粒度</td><td><span class="pill done">已实现</span></td><td>本地文件夹 + Git 仓库；面板一键创建（含自动 git init）；跨文件夹项目注册表。</td></tr>
+          <tr><td>代办</td><td><span class="pill done">已实现</span></td><td>完整状态机与看板；原子认领；拖拽放行（Backlog → Ready）。</td></tr>
+          <tr><td>开放问题</td><td><span class="pill done">已实现</span></td><td>阻塞语义、回答/搁置/关闭；management agent 审阅遇疑主动开问题。</td></tr>
+          <tr><td>知识沉淀</td><td><span class="pill done">已实现</span></td><td>四份记忆文件 + 索引；全文件提案、哈希守卫、校验后落库；面板可见变更。</td></tr>
+          <tr><td>守卫合并</td><td><span class="pill done">已实现</span></td><td>merge / 退回 / 阻塞三条出路；禁止原始 git 写操作；报告绑定提交哈希。</td></tr>
+          <tr><td>插件接入</td><td><span class="pill done">已实现</span></td><td>Claude Code（/team + 会话钩子）、Codex、通用 CLI；接入消息一键复制。</td></tr>
+          <tr><td>Management agent 无头运行</td><td><span class="pill done">已实现</span></td><td>守护进程按事件唤起 Claude Code / Codex 无头执行；复用本机登录；面板一键启停，随项目自动启动。</td></tr>
+          <tr><td>讨论沉淀（IM 接入）</td><td><span class="pill gap">规划中</span></td><td>收件箱与分诊流程已就绪，摄入端目前仅支持样例数据源；真实 IM CLI 接入与 always-on 定时沉淀是下一步重点。</td></tr>
+          <tr><td>云端团队空间 + 云端 management agent</td><td><span class="pill gap">规划中</span></td><td>当前为本地 demo；生产形态见第 07 节——协议不变，替换存储层与 runner 宿主。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-label"><span class="sec-num">10</span><h2>路线图</h2></div>
+    <ol>
+      <li><strong>IM 接入与 always-on 沉淀</strong>：接通企业微信 / Slack 等 IM CLI，支持用户触发与定时两种模式，把群聊持续提炼进收件箱——补齐闭环的入口。</li>
+      <li><strong>云端团队空间与云端 management agent</strong>：托管项目上下文与常驻维护者，使分布式团队共享同一份项目空间；本地模式保留为离线 / 私有化选项。</li>
+      <li><strong>更深的 agent 集成</strong>：基于 Claude Agent SDK 与 Codex app-server 的常驻 management agent 运行器，降低冷启动、增强可观测性。</li>
+      <li><strong>知识消费面</strong>：面向成员 agent 的知识检索与订阅接口，让「站在团队记忆上工作」成为每个任务的默认起点。</li>
+    </ol>
+  </section>
+
+  <footer>Team Collab · 设计书 v1.0 · 团队上下文是资产，agent 是插件，management agent 是维护者</footer>
+</div>
+
+</body>
+</html>
