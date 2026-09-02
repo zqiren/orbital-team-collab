@@ -551,6 +551,36 @@ class DashboardTests(unittest.TestCase):
                 self.assertIsInstance(agents["agents"][key]["signed_in"], bool)
                 self.assertTrue(agents["agents"][key]["login_hint"])
 
+    def test_daemon_lifecycle_start_status_stop(self) -> None:
+        try:
+            started = self.adapter.daemon_command("apollo", {"action": "start"})
+            self.assertTrue(started["daemon"]["running"])
+            pid = started["daemon"]["pid"]
+            self.assertIsInstance(pid, int)
+            # Idempotent start reports the same daemon instead of spawning twice.
+            again = self.adapter.daemon_command("apollo", {"action": "start"})
+            self.assertEqual(pid, again["daemon"]["pid"])
+            snapshot = self.adapter.snapshot("apollo")
+            self.assertTrue(snapshot["manager"]["daemon"]["running"])
+            # A fresh adapter (dashboard restart) adopts the daemon via pidfile.
+            fresh = DashboardAdapter(self.repo.repository, "human:default-manager")
+            adopted = fresh.snapshot("apollo")["manager"]["daemon"]
+            self.assertTrue(adopted["running"])
+            self.assertEqual(pid, adopted["pid"])
+        finally:
+            stopped = self.adapter.daemon_command("apollo", {"action": "stop"})
+        self.assertFalse(stopped["daemon"]["running"])
+        self.assertFalse(
+            self.adapter.snapshot("apollo")["manager"]["daemon"]["running"]
+        )
+        with self.assertRaises(TeamRuntimeError) as invalid:
+            self.adapter.daemon_command("apollo", {"action": "restart"})
+        self.assertEqual("E_USAGE", invalid.exception.code)
+        readonly = DashboardAdapter(self.repo.repository, None)
+        with self.assertRaises(TeamRuntimeError) as unauthorized:
+            readonly.daemon_command("apollo", {"action": "start"})
+        self.assertEqual("E_READ_ONLY", unauthorized.exception.code)
+
     def test_platform_browse_and_mkdir_are_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

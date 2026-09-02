@@ -131,6 +131,11 @@
               <div class="runner-apply"><button type="button" id="settings-runner-apply" class="btn" data-i18n="settings.runnerApply">Apply</button></div>
             </div>
             <p id="settings-agent-status" class="card-meta agent-status" hidden></p>
+            <div class="daemon-row">
+              <span id="daemon-status" class="agent-sub"></span>
+              <button type="button" id="daemon-toggle" class="btn btn-primary" data-i18n="daemon.start">Start daemon</button>
+            </div>
+            <p id="daemon-hint" class="card-meta"></p>
             <div id="manager-manual" class="manager-mode">
               <p class="card-body" data-i18n="settings.managerHint">Start an agent session in the canonical workspace on this machine and paste this message. The agent adopts the manager role, inspects the team state, then briefs you on how to run the project with it.</p>
               <pre id="manager-message" class="paste-message"></pre>
@@ -139,7 +144,7 @@
               </div>
             </div>
             <div id="settings-teamd" class="manager-mode" hidden>
-              <p class="card-body" data-i18n="settings.teamdHint">This runner drives the manager headlessly — no window to keep open. Keep the daemon below running in a terminal; it admits submitted reports as Integration Jobs and spawns the agent using the CLI's existing sign-in.</p>
+              <p class="card-body" data-i18n="settings.teamdHint">Prefer the daemon button above — this is the equivalent terminal command, if you'd rather run it yourself:</p>
               <pre id="teamd-command" class="paste-message"></pre>
               <div class="composer-actions">
                 <button type="button" id="teamd-copy" class="btn btn-primary" data-i18n="settings.copy">Copy message</button>

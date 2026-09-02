@@ -7,8 +7,10 @@ import mimetypes
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
+import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -149,6 +151,130 @@ def _initial_commit(path: Path) -> None:
     )
     if commit.returncode != 0:
         raise _git_failure("commit", commit)
+
+
+def _teamd_process(pid: int) -> bool:
+    """True when `pid` is alive and actually a teamd, so a stale pidfile whose
+    pid was recycled by an unrelated process is never signalled."""
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    try:
+        probe = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "command="],
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return False
+    return probe.returncode == 0 and "orbital_team.teamd" in probe.stdout
+
+
+class _DaemonManager:
+    """Dashboard-owned `teamd --watch` children, one per workspace runtime.
+
+    Daemons deliberately outlive the dashboard process (integration keeps
+    flowing with the dashboard closed); the pidfile inside the private runtime
+    lets a restarted dashboard adopt and stop them. Logs append to the runtime
+    as well, so nothing leaves the local machine.
+    """
+
+    def __init__(self) -> None:
+        self._procs: dict[str, subprocess.Popen[bytes]] = {}
+
+    @staticmethod
+    def _pid_path(runtime_root: Path) -> Path:
+        return runtime_root / "dashboard-daemon.pid"
+
+    @staticmethod
+    def _log_path(runtime_root: Path) -> Path:
+        return runtime_root / "dashboard-daemon.log"
+
+    def _adopted_pid(self, runtime_root: Path) -> int | None:
+        try:
+            pid = int(self._pid_path(runtime_root).read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            return None
+        return pid if _teamd_process(pid) else None
+
+    def status(self, workspace: str, runtime_root: Path) -> dict[str, Any]:
+        proc = self._procs.get(workspace)
+        if proc is not None:
+            if proc.poll() is None:
+                return {"pid": proc.pid, "running": True}
+            self._procs.pop(workspace, None)
+        pid = self._adopted_pid(runtime_root)
+        if pid is not None:
+            return {"pid": pid, "running": True}
+        return {"pid": None, "running": False}
+
+    def start(self, workspace: str, runtime_root: Path) -> dict[str, Any]:
+        current = self.status(workspace, runtime_root)
+        if current["running"]:
+            return current
+        environment = dict(os.environ)
+        src_dir = os.fspath(Path(__file__).resolve().parents[1])
+        existing = environment.get("PYTHONPATH")
+        environment["PYTHONPATH"] = (
+            src_dir + os.pathsep + existing if existing else src_dir
+        )
+        log = open(self._log_path(runtime_root), "ab")
+        try:
+            process = subprocess.Popen(
+                [
+                    sys.executable, "-m", "orbital_team.teamd",
+                    "--workspace", workspace, "--watch",
+                ],
+                cwd=workspace,
+                env=environment,
+                stdin=subprocess.DEVNULL,
+                stdout=log,
+                stderr=log,
+                start_new_session=True,
+            )
+        except OSError as exc:
+            raise TeamRuntimeError(
+                "E_GUARDRAIL_VIOLATION",
+                "Daemon could not be started.",
+                {"reason": str(exc)},
+            ) from exc
+        finally:
+            log.close()
+        self._procs[workspace] = process
+        try:
+            self._pid_path(runtime_root).write_text(str(process.pid), encoding="utf-8")
+        except OSError:
+            pass
+        return {"pid": process.pid, "running": True}
+
+    def stop(self, workspace: str, runtime_root: Path) -> dict[str, Any]:
+        proc = self._procs.pop(workspace, None)
+        pid = proc.pid if proc is not None and proc.poll() is None else None
+        if pid is None:
+            pid = self._adopted_pid(runtime_root)
+        if pid is not None:
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except OSError:
+                pass
+            for _ in range(30):
+                alive = proc.poll() is None if proc is not None else _teamd_process(pid)
+                if not alive:
+                    break
+                time.sleep(0.1)
+            else:
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except OSError:
+                    pass
+                if proc is not None:
+                    proc.wait(timeout=5)
+        try:
+            self._pid_path(runtime_root).unlink()
+        except OSError:
+            pass
+        return {"pid": None, "running": False}
 
 
 def _ensure_git_repository(path: Path) -> None:
@@ -472,6 +598,7 @@ class DashboardAdapter:
         self.actor = actor if isinstance(actor, str) and ACTOR_PATTERN.fullmatch(actor) else None
         self._projections: dict[str, DashboardProjection] = {}
         self._slug_workspace: dict[str, str] = {}
+        self._daemons = _DaemonManager()
 
     # ------------------------------------------------------------------
     # multi-folder project directory
@@ -564,10 +691,30 @@ class DashboardAdapter:
         }
 
     def snapshot(self, slug: str) -> dict[str, Any]:
-        projection, _ = self._project_context(slug)
+        projection, workspace = self._project_context(slug)
         result = projection.snapshot(slug)
         result["access"] = self._access(slug)
+        result["manager"]["daemon"] = self._daemons.status(
+            workspace, projection.paths.runtime_root
+        )
         return result
+
+    def daemon_command(
+        self, slug: str, payload: dict[str, Any], *, request_actor: str | None = None
+    ) -> dict[str, Any]:
+        self._require_write_actor(request_actor)
+        if not isinstance(payload, dict):
+            raise TeamRuntimeError("E_USAGE", "Dashboard command body must be an object.")
+        action = _required_string(payload.get("action"), "action")
+        if action not in {"start", "stop"}:
+            raise TeamRuntimeError("E_USAGE", "Daemon action must be start or stop.")
+        projection, workspace = self._project_context(slug)
+        runtime_root = projection.paths.runtime_root
+        if action == "start":
+            status = self._daemons.start(workspace, runtime_root)
+        else:
+            status = self._daemons.stop(workspace, runtime_root)
+        return {"daemon": status, "ok": True, "schema_version": SCHEMA_VERSION}
 
     def run_log(self, slug: str, run_id: str, kind: str) -> dict[str, Any]:
         projection, _ = self._project_context(slug)
@@ -948,10 +1095,13 @@ def dashboard_handler(
             parts = [part for part in path.split("/") if part]
             is_create = parts == ["api", "projects"]
             is_mkdir = parts == ["api", "platform", "mkdir"]
+            is_daemon = (
+                len(parts) == 4 and parts[:2] == ["api", "projects"] and parts[3] == "daemon"
+            )
             is_command = (
                 len(parts) == 5 and parts[:2] == ["api", "projects"] and parts[3] == "commands"
             )
-            if not (is_create or is_mkdir or is_command):
+            if not (is_create or is_mkdir or is_daemon or is_command):
                 self.send_error(HTTPStatus.NOT_FOUND)
                 return
             if self.headers.get_content_type() != "application/json":
@@ -975,6 +1125,10 @@ def dashboard_handler(
                     result = adapter.create_project(payload, request_actor=request_actor)
                 elif is_mkdir:
                     result = adapter.platform_mkdir(payload, request_actor=request_actor)
+                elif is_daemon:
+                    result = adapter.daemon_command(
+                        parts[2], payload, request_actor=request_actor
+                    )
                 else:
                     result = adapter.command(
                         parts[2], parts[4], payload, request_actor=request_actor

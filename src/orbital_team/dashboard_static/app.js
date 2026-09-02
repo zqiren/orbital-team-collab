@@ -175,7 +175,13 @@ const STRINGS = {
   "agents.signIn": {en: "{cli} CLI found, but no sign-in detected. Run `{hint}` once in a terminal.", zh: "已找到 {cli} CLI，但未检测到登录。请在终端运行一次 `{hint}`。"},
   "settings.runnerLabel": {en: "Runner", zh: "运行方式"},
   "settings.runnerApply": {en: "Apply", zh: "应用"},
-  "settings.teamdHint": {en: "This runner drives the manager headlessly — no window to keep open. Keep the daemon below running in a terminal; it admits submitted reports as Integration Jobs and spawns the agent using the CLI's existing sign-in.", zh: "该运行方式以无头模式驱动管理者——无需保持窗口打开。请在终端中保持运行以下守护进程；它会将已提交的报告转为集成任务，并使用 CLI 的现有登录启动智能体。"},
+  "settings.teamdHint": {en: "Prefer the daemon button above — this is the equivalent terminal command, if you'd rather run it yourself:", zh: "优先使用上方的守护进程按钮——如果你更愿意自己运行，这是等效的终端命令："},
+  "daemon.running": {en: "Daemon running · PID {pid}", zh: "守护进程运行中 · PID {pid}"},
+  "daemon.stopped": {en: "Daemon not running", zh: "守护进程未运行"},
+  "daemon.start": {en: "Start daemon", zh: "启动守护进程"},
+  "daemon.stop": {en: "Stop daemon", zh: "停止守护进程"},
+  "daemon.hintManual": {en: "The daemon turns submitted reports into Integration Jobs; with the manual runner, your pasted-in session still does the reviewing. It keeps running even if you close the dashboard.", zh: "守护进程会把已提交的报告转为集成任务；manual 模式下仍由你粘贴消息的会话完成审阅。即使关闭仪表盘它也会继续运行。"},
+  "daemon.hintHeadless": {en: "The daemon turns submitted reports into Integration Jobs and runs the {runner} manager headlessly, reusing the CLI's existing sign-in. It keeps running even if you close the dashboard.", zh: "守护进程会把已提交的报告转为集成任务，并以无头模式运行 {runner} 管理者，复用 CLI 的现有登录。即使关闭仪表盘它也会继续运行。"},
   "manager.queued": {en: " · {n} queued, awaiting manager", zh: " · {n} 个排队，等待管理者"},
   "agent.queued": {en: "{n} queued · waiting for the manager", zh: "{n} 个排队 · 等待管理者"},
   "shortcut.home": {en: "Home", zh: "主目录"},
@@ -227,6 +233,9 @@ const ui = {
   createRunner: document.querySelector("#create-runner"),
   createSubmit: document.querySelector("#create-submit"),
   createWorkspace: document.querySelector("#create-workspace"),
+  daemonHint: document.querySelector("#daemon-hint"),
+  daemonStatus: document.querySelector("#daemon-status"),
+  daemonToggle: document.querySelector("#daemon-toggle"),
   drawer: document.querySelector("#task-drawer"),
   fbCrumbs: document.querySelector("#fb-crumbs"),
   fbList: document.querySelector("#fb-list"),
@@ -680,6 +689,18 @@ function renderSetup() {
   if (!readOnly()) {
     updateAgentStatus(settingsRunnerTouched ? ui.settingsRunner.value : runner, ui.settingsAgentStatus);
   }
+  const daemon = snapshot?.manager?.daemon || {pid: null, running: false};
+  clear(ui.daemonStatus);
+  ui.daemonStatus.append(
+    node("span", undefined, `status-dot ${daemon.running ? "working" : ""}`.trim()),
+    node("span", daemon.running ? t("daemon.running", {pid: daemon.pid}) : t("daemon.stopped")),
+  );
+  ui.daemonToggle.textContent = t(daemon.running ? "daemon.stop" : "daemon.start");
+  ui.daemonToggle.classList.toggle("btn-primary", !daemon.running);
+  ui.daemonToggle.disabled = readOnly();
+  ui.daemonHint.textContent = headless
+    ? t("daemon.hintHeadless", {runner})
+    : t("daemon.hintManual");
 }
 
 /* -------------------------------------------------------------------- board */
@@ -1306,6 +1327,19 @@ ui.settingsRunnerApply.addEventListener("click", async () => {
   const runner = ui.settingsRunner.value;
   settingsRunnerTouched = false;
   await mutate("project.runner", {runner});
+});
+ui.daemonToggle.addEventListener("click", async () => {
+  const running = Boolean(snapshot?.manager?.daemon?.running);
+  ui.daemonToggle.disabled = true;
+  try {
+    await jsonFetch(`/api/projects/${encodeURIComponent(snapshot.project.slug)}/daemon`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({action: running ? "stop" : "start"}),
+    });
+    await refresh(true);
+  } catch (error) { showError(error.message); }
+  finally { ui.daemonToggle.disabled = readOnly(); }
 });
 ui.langEn.addEventListener("click", () => setLocale("en"));
 ui.langZh.addEventListener("click", () => setLocale("zh"));
